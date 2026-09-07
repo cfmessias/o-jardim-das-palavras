@@ -1,7 +1,9 @@
 const { useState, useEffect, useMemo, createElement: h } = React;
 
 const SUPABASE_URL = 'https://ostzbzkxvomuztprzdvw.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zdHpiemt4dm9tdXp0cHJ6ZHZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY4Nzk1OTUsImV4cCI6MjEwMjQ1NTU5NX0.ae8uWGBFn2gQ23GJykxRoZ8q9ci4Ql8Y4xIwalBSWsE';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1...';
+
+// 1. Cria a instância do cliente com um nome diferente de 'supabase'
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 function App() {
@@ -17,12 +19,21 @@ function App() {
 
   async function loadData() {
     setLoading(true);
-    const { data: stData } = await supabase.from('students').select('*').order('name');
-    const { data: wData } = await supabase.from('words').select('*');
+    
+    // 2. Utiliza 'supabaseClient' em vez de 'supabase'
+    const { data: stData, error: stErr } = await supabaseClient.from('students').select('*').order('name');
+    const { data: wData, error: wErr } = await supabaseClient.from('words').select('*');
+    
+    if (stErr) console.error("Erro nos alunos:", stErr);
+    if (wErr) console.error("Erro nas palavras:", wErr);
+
     if (stData) setStudents(stData);
     if (wData) setWords(wData);
+    
     setLoading(false);
   }
+
+  // ... restante código do componente App
 
   if (loading) {
     return h("div", { className: "screen center-screen" },

@@ -1,7 +1,7 @@
 const { useState, useEffect, useMemo, createElement: h } = React;
 
 const SUPABASE_URL = 'https://ostzbzkxvomuztprzdvw.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1...';
+const SUPABASE_KEY = 'sb_publishable_-htX27yum8JPlKEKQzVc5g_8irsro4Q';
 
 // 1. Cria a instância do cliente com um nome diferente de 'supabase'
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);

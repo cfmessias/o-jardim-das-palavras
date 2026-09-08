@@ -4,7 +4,6 @@ const { useState, useEffect } = React;
 
 function App() {
   // Estado Global
- 
   const [isRegistering, setIsRegistering] = useState(false);
   const [regName, setRegName] = useState("");
   const [regSchool, setRegSchool] = useState("");
@@ -16,7 +15,7 @@ function App() {
   const [progress, setProgress] = useState({});
   const [currentWord, setCurrentWord] = useState(null);
   const [activeCategory, setActiveCategory] = useState("animais");
-  const [currentView, setCurrentView] = useState("student_select"); // 'student_select', 'auth', 'dashboard', 'game'
+  const [currentView, setCurrentView] = useState("student_select");
 
   // Formulários
   const [loginEmail, setLoginEmail] = useState("");
@@ -25,14 +24,12 @@ function App() {
   const [newStudentPin, setNewStudentPin] = useState("");
   const [newStudentGrade, setNewStudentGrade] = useState("1");
 
-  // Carregar alunos ao iniciar
+  // Carregar alunos e sessão ao iniciar
   useEffect(() => {
     async function initApp() {
-      // Carrega todos os alunos para a seleção inicial
       const { data } = await supabase.from('students').select('*').order('name');
       if (data) setStudents(data);
 
-      // Carrega sessão guardada do professor
       const savedTeacher = getStoredTeacherSession();
       if (savedTeacher) {
         setTeacher(savedTeacher);
@@ -47,23 +44,12 @@ function App() {
   };
 
   // Ações do Professor
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    try {
-      const user = await loginTeacher(loginEmail, loginPass);
-      const profile = await getTeacherProfile(user.id);
-      setTeacher(profile || { id: user.id, name: "Professor" });
-      await loadTeacherStudents(user.id);
-      setCurrentView("dashboard");
-    } catch (err) {
-      alert("Erro ao entrar: " + err.message);
-    }
-  };
-
-  const handleLogout = () => {
-    clearTeacherSession();
+  const handleLogout = async () => {
+    await logoutTeacher();
     setTeacher(null);
     setSelectedStudent(null);
+    const { data } = await supabase.from('students').select('*').order('name');
+    if (data) setStudents(data);
     setCurrentView("student_select");
   };
 
@@ -118,7 +104,7 @@ function App() {
   const totalStars = Object.values(progress).reduce((acc, curr) => acc + (curr.stage || 0), 0);
   const filteredStudents = students.filter(s => Number(s.grade) === Number(selectedGrade));
 
-  // 1. ECRÃ INICIAL: Seleção do Aluno ("Quem vai jogar hoje?")
+  // 1. ECRÃ INICIAL: Seleção do Aluno
   if (currentView === "student_select") {
     return (
       <div className="container">
@@ -126,7 +112,6 @@ function App() {
           <h2>Quem vai jogar hoje?</h2>
           <p className="subtitle">Escolhe o teu ano e depois o teu nome na lista da turma.</p>
 
-          {/* Botões do 1.º ao 6.º Ano */}
           <div className="grade-selector" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', margin: '20px 0' }}>
             {[1, 2, 3, 4, 5, 6].map((grade) => {
               const isActive = Number(selectedGrade) === grade;
@@ -154,7 +139,6 @@ function App() {
             })}
           </div>
 
-          {/* Lista de Alunos do Ano Selecionado */}
           {filteredStudents.length > 0 ? (
             <div className="students-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px', marginTop: '16px' }}>
               {filteredStudents.map((s) => (
@@ -188,8 +172,7 @@ function App() {
     );
   }
 
-  // 2. ECRÃ: Login do Professor
-  
+  // 2. ECRÃ: Autenticação do Professor
   if (currentView === "auth") {
     const handleAuthSubmit = async (e) => {
       e.preventDefault();
@@ -209,7 +192,7 @@ function App() {
           setCurrentView("dashboard");
         }
       } catch (err) {
-        alert(err.message);
+        alert("Erro na autenticação: " + err.message);
       }
     };
 
@@ -257,48 +240,6 @@ function App() {
               onChange={(e) => setLoginPass(e.target.value)}
               required
             />
-          
-            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-              <button type="submit" className="btn btn-primary">
-                {isRegistering ? "Registar e Entrar" : "Entrar"}
-              </button>
-              <button type="button" className="btn btn-outline" onClick={() => setCurrentView("student_select")}>
-                Voltar
-              </button>
-            </div>
-          </form>
-
-          <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid #eee' }} />
-
-          <button
-            type="button"
-            className="link-btn"
-            onClick={() => setIsRegistering(!isRegistering)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#059669', fontSize: '0.95rem' }}
-          >
-            {isRegistering ? "Já tens conta? Faz login aqui." : "Ainda não tens conta? Regista-te aqui."}
-          </button>
-        </div>
-      </div>
-    );
-  }
-            
-            <input
-              type="email"
-              className="input"
-              placeholder="Email"
-              value={loginEmail}
-              onChange={(e) => setLoginEmail(e.target.value)}
-              required
-            />
-            <input
-              type="password"
-              className="input"
-              placeholder="Palavra-passe"
-              value={loginPass}
-              onChange={(e) => setLoginPass(e.target.value)}
-              required
-            />
 
             <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
               <button type="submit" className="btn btn-primary">
@@ -324,6 +265,7 @@ function App() {
       </div>
     );
   }
+
   // 3. ECRÃ: Painel do Professor (Dashboard)
   if (currentView === "dashboard") {
     return (

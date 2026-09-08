@@ -126,16 +126,32 @@ function App() {
           <p className="subtitle">Escolhe o teu ano e depois o teu nome na lista da turma.</p>
 
           {/* Botões do 1.º ao 6.º Ano */}
-          <div className="grade-selector" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', margin: '16px 0' }}>
-            {[1, 2, 3, 4, 5, 6].map((grade) => (
-              <button
-                key={grade}
-                className={`btn ${selectedGrade === grade ? "btn-primary" : "btn-outline"}`}
-                onClick={() => setSelectedGrade(grade)}
-              >
-                {grade}.º Ano
-              </button>
-            ))}
+         {/* Botões do 1.º ao 6.º Ano */}
+          <div className="grade-selector" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', margin: '20px 0' }}>
+            {[1, 2, 3, 4, 5, 6].map((grade) => {
+              const isActive = Number(selectedGrade) === grade;
+              return (
+                <button
+                  key={grade}
+                  type="button"
+                  onClick={() => setSelectedGrade(grade)}
+                  style={{
+                    padding: '10px 22px',
+                    borderRadius: '25px',
+                    border: isActive ? '2px solid #F2704E' : '1px solid #D1D5DB',
+                    backgroundColor: isActive ? '#FFF0ED' : '#FFFFFF',
+                    color: isActive ? '#F2704E' : '#374151',
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    outline: 'none',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {grade}.º Ano
+                </button>
+              );
+            })}
           </div>
 
           {/* Lista de Alunos do Ano Selecionado */}

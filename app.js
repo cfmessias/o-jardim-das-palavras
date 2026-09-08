@@ -178,8 +178,7 @@ function App() {
                 <option value="2">2.º Ano</option>
                 <option value="3">3.º Ano</option>
                 <option value="4">4.º Ano</option>
-                <option value="5">5.º Ano</option>
-                <option value="6">6.º Ano</option>
+               
               </select>
               <button type="submit" className="btn-primary">Adicionar Aluno</button>
             </form>

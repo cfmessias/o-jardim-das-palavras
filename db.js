@@ -7,34 +7,39 @@ const supabase = window.supabase.createClient(
   SUPABASE_KEY
 );
 
-const DEFAULT_TEACHER_PIN = "1234";
-// 1. AUTENTICAÇÃO DO PROFESSOR
-async function loginTeacher(email, password) {
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) throw error;
-  return data.user;
-}
+// 1. AUTENTICAÇÃO E SESSÃO DO PROFESSOR (Tabela Simples)
 
+// Registar novo professor na tabela pública
+async function registerTeacher(email, pin, name, school) {
+  const { data, error } = await supabase
+    .from('teachers')
+    .insert([{ email: email.trim().toLowerCase(), pin: pin.trim(), name, school }])
+    .select()
+    .single();
 
-async function registerTeacher(email, password, name, school) {
-  const { data: authData, error: authError } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { data: { name, school } }
-  });
-
-  if (authError) throw authError;
-
-  if (authData.user) {
-    const { error: profileError } = await supabase
-      .from('teachers')
-      .insert([{ id: authData.user.id, name, school }]);
-
-    if (profileError) throw profileError;
+  if (error) {
+    if (error.code === '23505') throw new Error("Este email já está registado!");
+    throw error;
   }
-  return authData.user;
+  return data;
 }
 
+// Login de professor por Email e PIN
+async function loginTeacher(email, pin) {
+  const { data, error } = await supabase
+    .from('teachers')
+    .select('*')
+    .eq('email', email.trim().toLowerCase())
+    .eq('pin', pin.trim())
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) throw new Error("Email ou PIN incorretos.");
+  
+  return data;
+}
+
+// Obter perfil do professor
 async function getTeacherProfile(teacherId) {
   const { data, error } = await supabase
     .from('teachers')
@@ -46,8 +51,22 @@ async function getTeacherProfile(teacherId) {
   return data;
 }
 
+// Gestão da sessão local (LocalStorage)
+function saveTeacherSession(teacher) {
+  localStorage.setItem('jardim_teacher', JSON.stringify(teacher));
+}
+
+function getStoredTeacherSession() {
+  const stored = localStorage.getItem('jardim_teacher');
+  return stored ? JSON.parse(stored) : null;
+}
+
+function clearTeacherSession() {
+  localStorage.removeItem('jardim_teacher');
+}
+
 async function logoutTeacher() {
-  await supabase.auth.signOut();
+  clearTeacherSession();
 }
 
 // 2. GESTÃO DE ALUNOS (Associados ao teacher_id)

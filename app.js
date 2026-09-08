@@ -313,9 +313,9 @@ function App() {
           <h3>Alunos Registados ({students.length})</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px', marginTop: '12px' }}>
             {students.map((student) => (
-              <div key={student.id} style={{ border: '1px solid #ddd', padding: '12px', borderRadius: '8px' }}>
-                <h4>{student.name}</h4>
-                <p>{student.grade}.º Ano</p>
+              <div key={student.id} style={{ border: '1px solid #ddd', padding: '12px', borderRadius: '8px', backgroundColor: '#fafafa' }}>
+                <h4 style={{ margin: '0 0 4px 0', color: '#111827' }}>{student.name || "Sem Nome"}</h4>
+                <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>{student.grade}.º Ano</p>
               </div>
             ))}
           </div>

@@ -267,6 +267,7 @@ function App() {
   }
 
   // 3. ECRÃ: Painel do Professor (Dashboard)
+  // 3. ECRÃ: Painel do Professor (Dashboard)
   if (currentView === "dashboard") {
     return (
       <div className="container">
@@ -280,32 +281,53 @@ function App() {
           <hr style={{ margin: '16px 0' }} />
 
           <h3>Criar Novo Aluno</h3>
-          <form onSubmit={handleCreateStudent} style={{ display: 'grid', gap: '12px', gridTemplateColumns: '1fr 1fr 1fr auto', marginTop: '12px' }}>
-            <input
-              type="text"
-              className="input"
-              placeholder="Nome do Aluno"
-              value={newStudentName}
-              onChange={(e) => setNewStudentName(e.target.value)}
-              required
-            />
-            <input
-              type="password"
-              className="input"
-              placeholder="PIN (4 dígitos)"
-              value={newStudentPin}
-              onChange={(e) => setNewStudentPin(e.target.value)}
-              required
-            />
-            <select className="input" value={newStudentGrade} onChange={(e) => setNewStudentGrade(e.target.value)}>
-              <option value="1">1.º Ano</option>
-              <option value="2">2.º Ano</option>
-              <option value="3">3.º Ano</option>
-              <option value="4">4.º Ano</option>
-              <option value="5">5.º Ano</option>
-              <option value="6">6.º Ano</option>
-            </select>
-            <button type="submit" className="btn btn-primary">Adicionar</button>
+          
+          {/* autoComplete="off" e labels previnem que o browser preencha com os dados do professor */}
+          <form 
+            onSubmit={handleCreateStudent} 
+            autoComplete="off"
+            style={{ display: 'grid', gap: '12px', gridTemplateColumns: '1fr 1fr 1fr auto', alignItems: 'end', marginTop: '12px' }}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Nome do Aluno</label>
+              <input
+                type="text"
+                className="input"
+                placeholder="Ex: Zé Maria"
+                value={newStudentName}
+                onChange={(e) => setNewStudentName(e.target.value)}
+                autoComplete="off"
+                required
+              />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>PIN do Aluno</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                className="input"
+                placeholder="Ex: 1234"
+                value={newStudentPin}
+                onChange={(e) => setNewStudentPin(e.target.value)}
+                autoComplete="new-password"
+                required
+              />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Ano Escolar</label>
+              <select className="input" value={newStudentGrade} onChange={(e) => setNewStudentGrade(e.target.value)}>
+                <option value="1">1.º Ano</option>
+                <option value="2">2.º Ano</option>
+                <option value="3">3.º Ano</option>
+                <option value="4">4.º Ano</option>
+                <option value="5">5.º Ano</option>
+                <option value="6">6.º Ano</option>
+              </select>
+            </div>
+
+            <button type="submit" className="btn btn-primary" style={{ height: '42px' }}>Adicionar</button>
           </form>
 
           <hr style={{ margin: '24px 0' }} />
@@ -314,7 +336,7 @@ function App() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px', marginTop: '12px' }}>
             {students.map((student) => (
               <div key={student.id} style={{ border: '1px solid #ddd', padding: '12px', borderRadius: '8px', backgroundColor: '#fafafa' }}>
-                <h4 style={{ margin: '0 0 4px 0', color: '#111827' }}>{student.name || "Sem Nome"}</h4>
+                <h4 style={{ margin: '0 0 4px 0', color: '#111827' }}>{student.name}</h4>
                 <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>{student.grade}.º Ano</p>
               </div>
             ))}

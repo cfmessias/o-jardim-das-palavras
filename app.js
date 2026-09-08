@@ -32,11 +32,10 @@ function App() {
       const { data } = await supabase.from('students').select('*').order('name');
       if (data) setStudents(data);
 
-      // Verifica se já há sessão de professor ativa
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        const profile = await getTeacherProfile(session.user.id);
-        setTeacher(profile || { id: session.user.id, name: "Professor" });
+      // Carrega sessão guardada do professor
+      const savedTeacher = getStoredTeacherSession();
+      if (savedTeacher) {
+        setTeacher(savedTeacher);
       }
     }
     initApp();
@@ -61,12 +60,10 @@ function App() {
     }
   };
 
-  const handleLogout = async () => {
-    await logoutTeacher();
+  const handleLogout = () => {
+    clearTeacherSession();
     setTeacher(null);
     setSelectedStudent(null);
-    const { data } = await supabase.from('students').select('*').order('name');
-    if (data) setStudents(data);
     setCurrentView("student_select");
   };
 
@@ -194,26 +191,27 @@ function App() {
 
   // 2. ECRÃ: Login do Professor
   // 2. ECRÃ: Autenticação do Professor (Login / Registo)
+  // 2. ECRÃ: Autenticação do Professor (Login / Registo por PIN)
   if (currentView === "auth") {
     const handleAuthSubmit = async (e) => {
       e.preventDefault();
       try {
         if (isRegistering) {
-          const user = await registerTeacher(loginEmail, loginPass, regName, regSchool);
-          alert("Conta criada com sucesso!");
-          const profile = await getTeacherProfile(user.id);
-          setTeacher(profile || { id: user.id, name: regName, school: regSchool });
-          await loadTeacherStudents(user.id);
+          const newTeacher = await registerTeacher(loginEmail, loginPass, regName, regSchool);
+          alert("Conta de professor criada com sucesso!");
+          setTeacher(newTeacher);
+          saveTeacherSession(newTeacher);
+          await loadTeacherStudents(newTeacher.id);
           setCurrentView("dashboard");
         } else {
-          const user = await loginTeacher(loginEmail, loginPass);
-          const profile = await getTeacherProfile(user.id);
-          setTeacher(profile || { id: user.id, name: "Professor" });
-          await loadTeacherStudents(user.id);
+          const loggedTeacher = await loginTeacher(loginEmail, loginPass);
+          setTeacher(loggedTeacher);
+          saveTeacherSession(loggedTeacher);
+          await loadTeacherStudents(loggedTeacher.id);
           setCurrentView("dashboard");
         }
       } catch (err) {
-        alert("Erro na autenticação: " + err.message);
+        alert(err.message);
       }
     };
 
@@ -244,6 +242,48 @@ function App() {
                 />
               </>
             )}
+            
+            <input
+              type="email"
+              className="input"
+              placeholder="Email"
+              value={loginEmail}
+              onChange={(e) => setLoginEmail(e.target.value)}
+              required
+            />
+            <input
+              type="password"
+              className="input"
+              placeholder="PIN / Palavra-passe"
+              value={loginPass}
+              onChange={(e) => setLoginPass(e.target.value)}
+              required
+            />
+
+            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+              <button type="submit" className="btn btn-primary">
+                {isRegistering ? "Registar e Entrar" : "Entrar"}
+              </button>
+              <button type="button" className="btn btn-outline" onClick={() => setCurrentView("student_select")}>
+                Voltar
+              </button>
+            </div>
+          </form>
+
+          <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid #eee' }} />
+
+          <button
+            type="button"
+            className="link-btn"
+            onClick={() => setIsRegistering(!isRegistering)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#059669', fontSize: '0.95rem' }}
+          >
+            {isRegistering ? "Já tens conta? Faz login aqui." : "Ainda não tens conta? Regista-te aqui."}
+          </button>
+        </div>
+      </div>
+    );
+  }
             
             <input
               type="email"

@@ -267,7 +267,6 @@ function App() {
   }
 
   // 3. ECRÃ: Painel do Professor (Dashboard)
-  // 3. ECRÃ: Painel do Professor (Dashboard)
   if (currentView === "dashboard") {
     return (
       <div className="container">

@@ -7,11 +7,12 @@ function App() {
   const [teacher, setTeacher] = useState(null);
   const [students, setStudents] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [selectedGrade, setSelectedGrade] = useState(1);
   const [words, setWords] = useState([]);
   const [progress, setProgress] = useState({});
   const [currentWord, setCurrentWord] = useState(null);
   const [activeCategory, setActiveCategory] = useState("animais");
-  const [currentView, setCurrentView] = useState("auth"); // 'auth', 'dashboard', 'game'
+  const [currentView, setCurrentView] = useState("student_select"); // 'student_select', 'auth', 'dashboard', 'game'
 
   // Formulários
   const [loginEmail, setLoginEmail] = useState("");
@@ -20,33 +21,36 @@ function App() {
   const [newStudentPin, setNewStudentPin] = useState("");
   const [newStudentGrade, setNewStudentGrade] = useState("1");
 
-  // 1. Verificação inicial de sessão
+  // Carregar alunos ao iniciar
   useEffect(() => {
-    async function checkSession() {
+    async function initApp() {
+      // Carrega todos os alunos para a seleção inicial
+      const { data } = await supabase.from('students').select('*').order('name');
+      if (data) setStudents(data);
+
+      // Verifica se já há sessão de professor ativa
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         const profile = await getTeacherProfile(session.user.id);
         setTeacher(profile || { id: session.user.id, name: "Professor" });
-        await loadStudents(session.user.id);
-        setCurrentView("dashboard");
       }
     }
-    checkSession();
+    initApp();
   }, []);
 
-  const loadStudents = async (teacherId) => {
+  const loadTeacherStudents = async (teacherId) => {
     const list = await getStudentsByTeacher(teacherId);
     setStudents(list);
   };
 
-  // 2. Ações do Professor
+  // Ações do Professor
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
       const user = await loginTeacher(loginEmail, loginPass);
       const profile = await getTeacherProfile(user.id);
       setTeacher(profile || { id: user.id, name: "Professor" });
-      await loadStudents(user.id);
+      await loadTeacherStudents(user.id);
       setCurrentView("dashboard");
     } catch (err) {
       alert("Erro ao entrar: " + err.message);
@@ -57,7 +61,9 @@ function App() {
     await logoutTeacher();
     setTeacher(null);
     setSelectedStudent(null);
-    setCurrentView("auth");
+    const { data } = await supabase.from('students').select('*').order('name');
+    if (data) setStudents(data);
+    setCurrentView("student_select");
   };
 
   const handleCreateStudent = async (e) => {
@@ -73,8 +79,8 @@ function App() {
     }
   };
 
-  // 3. Ações do Aluno (Jogo)
-  const handleStartStudentSession = async (student) => {
+  // Ações do Aluno
+  const handleSelectStudent = async (student) => {
     const pin = prompt(`Digita o PIN para entrar como ${student.name}:`);
     if (!pin) return;
 
@@ -85,8 +91,6 @@ function App() {
     }
 
     setSelectedStudent(validated);
-    
-    // Carregar palavras e progresso do aluno
     const studentWords = await getWordsByGrade(validated.grade);
     const studentProgress = await getStudentProgress(validated.id);
 
@@ -100,7 +104,6 @@ function App() {
 
     await saveStudentProgress(selectedStudent.id, currentWord.id, nextStage, writtenSentence);
     
-    // Atualiza estado local
     setProgress((prev) => ({
       ...prev,
       [currentWord.id]: {
@@ -111,21 +114,75 @@ function App() {
     }));
   };
 
-  // Cálculo de Estrelas do Aluno
   const totalStars = Object.values(progress).reduce((acc, curr) => acc + (curr.stage || 0), 0);
+  const filteredStudents = students.filter(s => Number(s.grade) === Number(selectedGrade));
 
-  // --- RENDERS ---
+  // 1. ECRÃ INICIAL: Seleção do Aluno ("Quem vai jogar hoje?")
+  if (currentView === "student_select") {
+    return (
+      <div className="container">
+        <div className="card">
+          <h2>Quem vai jogar hoje?</h2>
+          <p className="subtitle">Escolhe o teu ano e depois o teu nome na lista da turma.</p>
 
-  // ECRÃ 1: Autenticação do Professor
+          {/* Botões do 1.º ao 6.º Ano */}
+          <div className="grade-selector" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', margin: '16px 0' }}>
+            {[1, 2, 3, 4, 5, 6].map((grade) => (
+              <button
+                key={grade}
+                className={`btn ${selectedGrade === grade ? "btn-primary" : "btn-outline"}`}
+                onClick={() => setSelectedGrade(grade)}
+              >
+                {grade}.º Ano
+              </button>
+            ))}
+          </div>
+
+          {/* Lista de Alunos do Ano Selecionado */}
+          {filteredStudents.length > 0 ? (
+            <div className="students-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px', marginTop: '16px' }}>
+              {filteredStudents.map((s) => (
+                <button
+                  key={s.id}
+                  className="btn btn-outline student-card-btn"
+                  onClick={() => handleSelectStudent(s)}
+                  style={{ padding: '16px', borderRadius: '12px', textAlign: 'center' }}
+                >
+                  <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{s.name}</div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="empty-message" style={{ margin: '24px 0', color: '#666' }}>
+              Ainda não há alunos registados neste ano. Pede ao professor para te adicionar.
+            </p>
+          )}
+
+          <hr style={{ margin: '24px 0', border: 'none', borderTop: '1px solid #eee' }} />
+
+          <button
+            className="link-btn"
+            onClick={() => setCurrentView(teacher ? "dashboard" : "auth")}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d97706' }}
+          >
+            🔑 Acesso do professor
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. ECRÃ: Login do Professor
   if (currentView === "auth") {
     return (
-      <div className="auth-screen">
-        <div className="auth-card">
+      <div className="container">
+        <div className="card">
           <h1>🌿 O Jardim das Palavras</h1>
-          <p>Área Reservada aos Professores</p>
-          <form onSubmit={handleLogin}>
+          <h3>Área Reservada aos Professores</h3>
+          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
             <input
               type="email"
+              className="input"
               placeholder="Email"
               value={loginEmail}
               onChange={(e) => setLoginEmail(e.target.value)}
@@ -133,100 +190,103 @@ function App() {
             />
             <input
               type="password"
+              className="input"
               placeholder="Palavra-passe"
               value={loginPass}
               onChange={(e) => setLoginPass(e.target.value)}
               required
             />
-            <button type="submit" className="btn-primary">Entrar</button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button type="submit" className="btn btn-primary">Entrar</button>
+              <button type="button" className="btn btn-outline" onClick={() => setCurrentView("student_select")}>Voltar</button>
+            </div>
           </form>
         </div>
       </div>
     );
   }
 
-  // ECRÃ 2: Painel da Turma (Dashboard)
+  // 3. ECRÃ: Painel do Professor (Dashboard)
   if (currentView === "dashboard") {
     return (
-      <div className="dashboard-screen">
-        <header className="top-bar">
-          <h2>Painel do Professor</h2>
-          <span>Prof. {teacher?.name} ({teacher?.school || "Escola"})</span>
-          <button onClick={handleLogout} className="btn-secondary">Sair</button>
-        </header>
+      <div className="container">
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2>Painel do Professor</h2>
+            <button onClick={handleLogout} className="btn btn-outline">Sair</button>
+          </div>
+          <p>Prof. {teacher?.name} ({teacher?.school || "Escola"})</p>
 
-        <main className="dashboard-content">
-          <section className="form-section">
-            <h3>Criar Novo Aluno</h3>
-            <form onSubmit={handleCreateStudent}>
-              <input
-                type="text"
-                placeholder="Nome do Aluno"
-                value={newStudentName}
-                onChange={(e) => setNewStudentName(e.target.value)}
-                required
-              />
-              <input
-                type="password"
-                placeholder="PIN (4 dígitos)"
-                value={newStudentPin}
-                onChange={(e) => setNewStudentPin(e.target.value)}
-                required
-              />
-              <select value={newStudentGrade} onChange={(e) => setNewStudentGrade(e.target.value)}>
-                <option value="1">1º Ano</option>
-                <option value="2">2º Ano</option>
-                <option value="3">3º Ano</option>
-                <option value="4">4º Ano</option>
-              </select>
-              <button type="submit" className="btn-primary">Adicionar Aluno</button>
-            </form>
-          </section>
+          <hr style={{ margin: '16px 0' }} />
 
-          <section className="list-section">
-            <h3>Alunos da Turma</h3>
-            <div className="students-grid">
-              {students.map((student) => (
-                <div key={student.id} className="student-card">
-                  <Avatar config={{ skinTone: SKIN_TONES[0] }} size="small" />
-                  <h4>{student.name}</h4>
-                  <p>{student.grade}º Ano</p>
-                  <button
-                    onClick={() => handleStartStudentSession(student)}
-                    className="btn-action"
-                  >
-                    Entrar no Jardim 🌸
-                  </button>
-                </div>
-              ))}
-            </div>
-          </section>
-        </main>
+          <h3>Criar Novo Aluno</h3>
+          <form onSubmit={handleCreateStudent} style={{ display: 'grid', gap: '12px', gridTemplateColumns: '1fr 1fr 1fr auto', marginTop: '12px' }}>
+            <input
+              type="text"
+              className="input"
+              placeholder="Nome do Aluno"
+              value={newStudentName}
+              onChange={(e) => setNewStudentName(e.target.value)}
+              required
+            />
+            <input
+              type="password"
+              className="input"
+              placeholder="PIN (4 dígitos)"
+              value={newStudentPin}
+              onChange={(e) => setNewStudentPin(e.target.value)}
+              required
+            />
+            <select className="input" value={newStudentGrade} onChange={(e) => setNewStudentGrade(e.target.value)}>
+              <option value="1">1.º Ano</option>
+              <option value="2">2.º Ano</option>
+              <option value="3">3.º Ano</option>
+              <option value="4">4.º Ano</option>
+              <option value="5">5.º Ano</option>
+              <option value="6">6.º Ano</option>
+            </select>
+            <button type="submit" className="btn btn-primary">Adicionar</button>
+          </form>
+
+          <hr style={{ margin: '24px 0' }} />
+
+          <h3>Alunos Registados ({students.length})</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px', marginTop: '12px' }}>
+            {students.map((student) => (
+              <div key={student.id} style={{ border: '1px solid #ddd', padding: '12px', borderRadius: '8px' }}>
+                <h4>{student.name}</h4>
+                <p>{student.grade}.º Ano</p>
+              </div>
+            ))}
+          </div>
+
+          <button className="btn btn-outline" style={{ marginTop: '20px' }} onClick={() => setCurrentView("student_select")}>
+            Ver Visão do Aluno
+          </button>
+        </div>
       </div>
     );
   }
 
-  // ECRÃ 3: O Jogo do Aluno
+  // 4. ECRÃ: O Jogo
   return (
-    <div className="game-screen">
-      <header className="game-header">
-        <button onClick={() => setCurrentView("dashboard")} className="btn-back">
-          ← Voltar à Turma
+    <div className="container">
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <button onClick={() => setCurrentView("student_select")} className="btn btn-outline">
+          ← Voltar à Seleção
         </button>
-        <div className="student-info">
-          <span>Jardim de <strong>{selectedStudent.name}</strong></span>
+        <div>
+          Jardim de <strong>{selectedStudent.name}</strong> ({selectedStudent.grade}.º Ano)
           <StarBadge stars={totalStars} />
         </div>
       </header>
 
-      <main className="game-container">
-        {/* Categorias */}
-        <nav className="categories-nav">
+      <main className="card">
+        <nav style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
           {CATEGORIES.map((cat) => (
             <button
               key={cat.id}
-              className={`cat-btn ${activeCategory === cat.id ? "active" : ""}`}
-              style={{ backgroundColor: cat.color }}
+              className={`btn ${activeCategory === cat.id ? "btn-primary" : "btn-outline"}`}
               onClick={() => {
                 setActiveCategory(cat.id);
                 setCurrentWord(null);
@@ -237,27 +297,26 @@ function App() {
           ))}
         </nav>
 
-        {/* Grelha de Palavras vs Exercício Ativo */}
         {!currentWord ? (
-          <div className="words-grid">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '12px' }}>
             {words.map((w) => {
               const wordStage = progress[w.id]?.stage || 0;
               return (
                 <div
                   key={w.id}
-                  className={`word-card stage-${wordStage}`}
                   onClick={() => setCurrentWord(w)}
+                  style={{ border: '1px solid #ccc', padding: '12px', borderRadius: '8px', cursor: 'pointer', textAlign: 'center' }}
                 >
-                  <span className="emoji">{w.emoji}</span>
-                  <span className="label">{w.word}</span>
+                  <div style={{ fontSize: '2rem' }}>{w.emoji}</div>
+                  <div>{w.word}</div>
                   <ProgressDots stage={wordStage} />
                 </div>
               );
             })}
           </div>
         ) : (
-          <div className="activity-view">
-            <button onClick={() => setCurrentWord(null)} className="btn-close">
+          <div>
+            <button onClick={() => setCurrentWord(null)} className="btn btn-outline" style={{ marginBottom: '12px' }}>
               ✖ Fechar Palavra
             </button>
             <ActivityStages
@@ -272,7 +331,6 @@ function App() {
   );
 }
 
-// Renderização na div #root
 const rootElement = document.getElementById("root");
 if (rootElement) {
   ReactDOM.render(<App />, rootElement);

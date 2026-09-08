@@ -2,11 +2,12 @@
 const SUPABASE_URL = "https://ostzbzkxvomuztprzdvw.supabase.co";
 const SUPABASE_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zdHpiemt4dm9tdXp0cHJ6ZHZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY4Nzk1OTUsImV4cCI6MjEwMjQ1NTU5NX0.ae8uWGBFn2gQ23GJykxRoZ8q9ci4Ql8Y4xIwalBSWsE";
-const supabase = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
-);
 
+// Garante a criação do cliente sem conflito de redeclaração
+if (typeof window.supabaseClient === "undefined") {
+  window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+}
+var supabase = window.supabaseClient;
 // 1. AUTENTICAÇÃO E SESSÃO DO PROFESSOR (Tabela Simples)
 
 // Registar novo professor na tabela pública

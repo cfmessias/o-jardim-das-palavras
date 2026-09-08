@@ -174,10 +174,10 @@ function App() {
                 required
               />
               <select value={newStudentGrade} onChange={(e) => setNewStudentGrade(e.target.value)}>
-                <option value="1">1.º Ano</option>
-                <option value="2">2.º Ano</option>
-                <option value="3">3.º Ano</option>
-                <option value="4">4.º Ano</option>               
+                <option value="1">1º Ano</option>
+                <option value="2">2º Ano</option>
+                <option value="3">3º Ano</option>
+                <option value="4">4º Ano</option>
               </select>
               <button type="submit" className="btn-primary">Adicionar Aluno</button>
             </form>

@@ -127,7 +127,6 @@ function App() {
           <p className="subtitle">Escolhe o teu ano e depois o teu nome na lista da turma.</p>
 
           {/* Botões do 1.º ao 6.º Ano */}
-         {/* Botões do 1.º ao 6.º Ano */}
           <div className="grade-selector" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', margin: '20px 0' }}>
             {[1, 2, 3, 4, 5, 6].map((grade) => {
               const isActive = Number(selectedGrade) === grade;
@@ -190,8 +189,7 @@ function App() {
   }
 
   // 2. ECRÃ: Login do Professor
-  // 2. ECRÃ: Autenticação do Professor (Login / Registo)
-  // 2. ECRÃ: Autenticação do Professor (Login / Registo por PIN)
+  
   if (currentView === "auth") {
     const handleAuthSubmit = async (e) => {
       e.preventDefault();
@@ -223,7 +221,7 @@ function App() {
           
           <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
             {isRegistering && (
-              <>
+              <React.Fragment>
                 <input
                   type="text"
                   className="input"
@@ -240,7 +238,7 @@ function App() {
                   onChange={(e) => setRegSchool(e.target.value)}
                   required
                 />
-              </>
+              </React.Fragment>
             )}
             
             <input
@@ -259,7 +257,7 @@ function App() {
               onChange={(e) => setLoginPass(e.target.value)}
               required
             />
-
+          
             <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
               <button type="submit" className="btn btn-primary">
                 {isRegistering ? "Registar e Entrar" : "Entrar"}

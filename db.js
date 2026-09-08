@@ -1,11 +1,20 @@
 // db.js - Gestão de dados e comunicação com o Supabase
+const SUPABASE_URL = "https://ostzbzkxvomuztprzdvw.supabase.co";
+const SUPABASE_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zdHpiemt4dm9tdXp0cHJ6ZHZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY4Nzk1OTUsImV4cCI6MjEwMjQ1NTU5NX0.ae8uWGBFn2gQ23GJykxRoZ8q9ci4Ql8Y4xIwalBSWsE";
+const supabase = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
 
+const DEFAULT_TEACHER_PIN = "1234";
 // 1. AUTENTICAÇÃO DO PROFESSOR
 async function loginTeacher(email, password) {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
   return data.user;
 }
+
 
 async function registerTeacher(email, password, name, school) {
   const { data: authData, error: authError } = await supabase.auth.signUp({

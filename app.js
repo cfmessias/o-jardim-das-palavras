@@ -4,6 +4,10 @@ const { useState, useEffect } = React;
 
 function App() {
   // Estado Global
+ 
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [regName, setRegName] = useState("");
+  const [regSchool, setRegSchool] = useState("");
   const [teacher, setTeacher] = useState(null);
   const [students, setStudents] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -189,13 +193,58 @@ function App() {
   }
 
   // 2. ECRÃ: Login do Professor
+  // 2. ECRÃ: Autenticação do Professor (Login / Registo)
   if (currentView === "auth") {
+    const handleAuthSubmit = async (e) => {
+      e.preventDefault();
+      try {
+        if (isRegistering) {
+          const user = await registerTeacher(loginEmail, loginPass, regName, regSchool);
+          alert("Conta criada com sucesso!");
+          const profile = await getTeacherProfile(user.id);
+          setTeacher(profile || { id: user.id, name: regName, school: regSchool });
+          await loadTeacherStudents(user.id);
+          setCurrentView("dashboard");
+        } else {
+          const user = await loginTeacher(loginEmail, loginPass);
+          const profile = await getTeacherProfile(user.id);
+          setTeacher(profile || { id: user.id, name: "Professor" });
+          await loadTeacherStudents(user.id);
+          setCurrentView("dashboard");
+        }
+      } catch (err) {
+        alert("Erro na autenticação: " + err.message);
+      }
+    };
+
     return (
       <div className="container">
         <div className="card">
           <h1>🌿 O Jardim das Palavras</h1>
-          <h3>Área Reservada aos Professores</h3>
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
+          <h3>{isRegistering ? "Criar Conta de Professor" : "Área Reservada aos Professores"}</h3>
+          
+          <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
+            {isRegistering && (
+              <>
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Nome Completo"
+                  value={regName}
+                  onChange={(e) => setRegName(e.target.value)}
+                  required
+                />
+                <input
+                  type="text"
+                  className="input"
+                  placeholder="Escola / Agrupamento"
+                  value={regSchool}
+                  onChange={(e) => setRegSchool(e.target.value)}
+                  required
+                />
+              </>
+            )}
+            
             <input
               type="email"
               className="input"
@@ -212,16 +261,31 @@ function App() {
               onChange={(e) => setLoginPass(e.target.value)}
               required
             />
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button type="submit" className="btn btn-primary">Entrar</button>
-              <button type="button" className="btn btn-outline" onClick={() => setCurrentView("student_select")}>Voltar</button>
+
+            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+              <button type="submit" className="btn btn-primary">
+                {isRegistering ? "Registar e Entrar" : "Entrar"}
+              </button>
+              <button type="button" className="btn btn-outline" onClick={() => setCurrentView("student_select")}>
+                Voltar
+              </button>
             </div>
           </form>
+
+          <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid #eee' }} />
+
+          <button
+            type="button"
+            className="link-btn"
+            onClick={() => setIsRegistering(!isRegistering)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#059669', fontSize: '0.95rem' }}
+          >
+            {isRegistering ? "Já tens conta? Faz login aqui." : "Ainda não tens conta? Regista-te aqui."}
+          </button>
         </div>
       </div>
     );
   }
-
   // 3. ECRÃ: Painel do Professor (Dashboard)
   if (currentView === "dashboard") {
     return (

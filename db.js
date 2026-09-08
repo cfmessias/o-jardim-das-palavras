@@ -86,20 +86,24 @@ async function getStudentsByTeacher(teacherId) {
 }
 
 async function createStudent(teacherId, name, pin, grade) {
+  if (!name || !name.trim()) throw new Error("O nome do aluno é obrigatório.");
+  if (!pin || !pin.trim()) throw new Error("O PIN do aluno é obrigatório.");
+
   const { data, error } = await supabase
     .from('students')
     .insert([
       { 
         teacher_id: teacherId, 
-        name: name, 
-        pin: pin, 
+        name: name.trim(), 
+        pin: pin.trim(), 
         grade: parseInt(grade) 
       }
     ])
-    .select();
+    .select()
+    .single();
 
   if (error) throw error;
-  return data[0];
+  return data;
 }
 
 async function verifyStudentPin(studentId, pin) {

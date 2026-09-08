@@ -6,20 +6,83 @@ const { useState, useEffect, useRef } = React;
    Progressão por palavra: 0 Descobre -> 1 Completa a frase -> 2 Escreve -> 3 Dominada
    ========================================================================= */
 
-const storage = {
-  async get(key) {
-    const v = localStorage.getItem(key);
-    return v === null ? null : { key, value: v };
-  },
-  async set(key, value) {
-    localStorage.setItem(key, value);
-    return { key, value };
-  },
-  async delete(key) {
-    localStorage.removeItem(key);
-    return { key, deleted: true };
-  },
-};
+/* =========================================================================
+   SUPABASE — base de dados da turma
+   Tabela "students": id, name, grade, pin, avatar (jsonb), progress (jsonb)
+   Tabela "class_settings": key, value  (usa a chave "teacher_pin")
+   ========================================================================= */
+const SUPABASE_URL = "https://ostzbzkxvomuztprzdvw.supabase.co";
+const SUPABASE_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9zdHpiemt4dm9tdXp0cHJ6ZHZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY4Nzk1OTUsImV4cCI6MjEwMjQ1NTU5NX0.ae8uWGBFn2gQ23GJykxRoZ8q9ci4Ql8Y4xIwalBSWsE";
+const supabase = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+const DEFAULT_TEACHER_PIN = "1234";
+
+async function fetchStudents() {
+  const { data, error } = await supabase
+    .from("students")
+    .select("*")
+    .order("grade")
+    .order("name");
+
+  if (error) throw error;
+  return data || [];
+}
+
+async function fetchTeacherPin() {
+  const { data, error } = await supabase
+    .from("class_settings")
+    .select("*")
+    .eq("key", "teacher_pin")
+    .maybeSingle();
+
+  if (error || !data) return DEFAULT_TEACHER_PIN;
+  return data.value || DEFAULT_TEACHER_PIN;
+}
+
+async function saveTeacherPin(pin) {
+  await supabase
+    .from("class_settings")
+    .upsert({ key: "teacher_pin", value: pin });
+}
+
+async function createStudent({ name, grade, pin }) {
+  return supabase.from("students").insert([
+    {
+      name,
+      grade,
+      pin,
+      avatar: {
+        name: "",
+        skin: SKIN_TONES[0],
+        hairColor: HAIR_COLORS[0],
+        hairStyle: "liso",
+      },
+      progress: {},
+    },
+  ]);
+}
+
+async function updateStudentInfo(id, { name, grade, pin }) {
+  return supabase
+    .from("students")
+    .update({ name, grade, pin })
+    .eq("id", id);
+}
+
+async function deleteStudent(id) {
+  return supabase.from("students").delete().eq("id", id);
+}
+
+async function saveStudentData(id, { avatar, progress }) {
+  return supabase
+    .from("students")
+    .update({ avatar, progress })
+    .eq("id", id);
+}
 
 const CATEGORIES = [
   {
@@ -571,7 +634,18 @@ function ProgressDots({ stage }) {
 function App() {
   const [loading, setLoading] = useState(true);
 
-  const [screen, setScreen] = useState("setup");
+  const [screen, setScreen] = useState("login");
+
+  const [students, setStudents] = useState([]);
+
+  const [teacherPin, setTeacherPin] =
+    useState(DEFAULT_TEACHER_PIN);
+
+  const [selectedStudentId, setSelectedStudentId] =
+    useState("");
+
+  const [currentStudent, setCurrentStudent] =
+    useState(null);
 
   const [avatar, setAvatar] = useState({
     name: "",
@@ -598,47 +672,64 @@ function App() {
   );
 
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await storage.get(
-          "jdp-profile"
-        );
-
-        if (res && res.value) {
-          const data = JSON.parse(res.value);
-
-          if (data.avatar) {
-            setAvatar(data.avatar);
-          }
-
-          if (data.progress) {
-            setProgress(data.progress);
-          }
-
-          if (data.setupDone) {
-            setScreen("map");
-          }
-        }
-      } catch (e) {
-        // sem perfil guardado ainda — começa do zero
-      } finally {
-        setLoading(false);
-      }
-    })();
+    loadClassData();
   }, []);
 
+  async function loadClassData() {
+    setLoading(true);
+
+    try {
+      const [list, pin] = await Promise.all([
+        fetchStudents(),
+        fetchTeacherPin(),
+      ]);
+
+      setStudents(list);
+      setTeacherPin(pin);
+    } catch (e) {
+      console.error(
+        "Não foi possível ligar ao Supabase",
+        e
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function blankAvatar() {
+    return {
+      name: "",
+      skin: SKIN_TONES[0],
+      hairColor: HAIR_COLORS[0],
+      hairStyle: "liso",
+    };
+  }
+
+  function handleStudentPinSuccess(student) {
+    const savedAvatar =
+      student.avatar && student.avatar.skin
+        ? student.avatar
+        : blankAvatar();
+
+    setCurrentStudent(student);
+    setAvatar(savedAvatar);
+    setProgress(student.progress || {});
+    setScreen(
+      savedAvatar.name ? "map" : "setup"
+    );
+  }
+
   function saveProfile(next) {
+    if (!currentStudent) return;
+
     clearTimeout(saveTimer.current);
 
     saveTimer.current = setTimeout(
       async () => {
         try {
-          await storage.set(
-            "jdp-profile",
-            JSON.stringify({
-              setupDone: true,
-              ...next,
-            })
+          await saveStudentData(
+            currentStudent.id,
+            next
           );
         } catch (e) {
           console.error(
@@ -653,7 +744,9 @@ function App() {
 
   function finishSetup() {
     const finalName =
-      avatar.name.trim() || "Explorador";
+      avatar.name.trim() ||
+      (currentStudent && currentStudent.name) ||
+      "Explorador";
 
     const next = {
       ...avatar,
@@ -717,20 +810,35 @@ function App() {
   }
 
   function resetGame() {
+    const fresh = blankAvatar();
+
     setProgress({});
-
-    setAvatar({
-      name: "",
-      skin: SKIN_TONES[0],
-      hairColor: HAIR_COLORS[0],
-      hairStyle: "liso",
-    });
-
+    setAvatar(fresh);
     setScreen("setup");
 
-    storage
-      .delete("jdp-profile")
-      .catch(() => {});
+    if (currentStudent) {
+      clearTimeout(saveTimer.current);
+
+      saveStudentData(currentStudent.id, {
+        avatar: fresh,
+        progress: {},
+      }).catch(() => {});
+    }
+  }
+
+  function handleLogout() {
+    clearTimeout(saveTimer.current);
+
+    setCurrentStudent(null);
+    setSelectedStudentId("");
+    setAvatar(blankAvatar());
+    setProgress({});
+    setActiveCategory(null);
+    setActiveWord(null);
+    setToast(null);
+    setScreen("login");
+
+    loadClassData();
   }
 
   if (loading) {
@@ -751,7 +859,49 @@ function App() {
 
   return (
     <div className="jdp-root">
-      {screen === "setup" && (
+      {screen === "login" && (
+        <LoginScreen
+          students={students}
+          onSelectStudent={(id) => {
+            setSelectedStudentId(id);
+            setScreen("student_pin");
+          }}
+          onOpenTeacher={() =>
+            setScreen("teacher_pin")
+          }
+        />
+      )}
+
+      {screen === "student_pin" && (
+        <StudentPinScreen
+          student={students.find(
+            (s) => s.id === selectedStudentId
+          )}
+          onBack={() => setScreen("login")}
+          onSuccess={handleStudentPinSuccess}
+        />
+      )}
+
+      {screen === "teacher_pin" && (
+        <TeacherPinScreen
+          correctPin={teacherPin}
+          onBack={() => setScreen("login")}
+          onSuccess={() =>
+            setScreen("teacher_dash")
+          }
+        />
+      )}
+
+      {screen === "teacher_dash" && (
+        <TeacherDashboard
+          students={students}
+          teacherPin={teacherPin}
+          onReload={loadClassData}
+          onExit={() => setScreen("login")}
+        />
+      )}
+
+      {screen === "setup" && currentStudent && (
         <SetupScreen
           avatar={avatar}
           setAvatar={setAvatar}
@@ -759,7 +909,7 @@ function App() {
         />
       )}
 
-      {screen === "map" && (
+      {screen === "map" && currentStudent && (
         <MapScreen
           avatar={avatar}
           progress={progress}
@@ -769,6 +919,7 @@ function App() {
             setScreen("category");
           }}
           onReset={resetGame}
+          onLogout={handleLogout}
         />
       )}
 
@@ -817,6 +968,568 @@ function App() {
           }
         />
       )}
+    </div>
+  );
+}
+
+/* --------------------------- Login & PIN screens --------------------------- */
+
+function LoginScreen({
+  students,
+  onSelectStudent,
+  onOpenTeacher,
+}) {
+  const grades = Array.from(
+    new Set(students.map((s) => s.grade))
+  ).sort((a, b) => a - b);
+
+  const [selectedGrade, setSelectedGrade] = useState(
+    grades[0] || 1
+  );
+
+  const filtered = students.filter(
+    (s) => s.grade === selectedGrade
+  );
+
+  return (
+    <div className="screen setup-screen">
+      <div className="setup-card">
+        <h1>Quem vai jogar hoje?</h1>
+
+        <p className="sub">
+          Escolhe o teu ano e depois o teu nome
+          na lista da turma.
+        </p>
+
+        <div className="chip-row">
+          {(grades.length ? grades : [1, 2, 3, 4]).map(
+            (g) => (
+              <button
+                key={g}
+                className={`pill ${
+                  selectedGrade === g
+                    ? "selected"
+                    : ""
+                }`}
+                onClick={() =>
+                  setSelectedGrade(g)
+                }
+              >
+                {g}.º Ano
+              </button>
+            )
+          )}
+        </div>
+
+        {filtered.length > 0 ? (
+          <div
+            className="island-grid"
+            style={{ marginTop: 16 }}
+          >
+            {filtered.map((s) => (
+              <button
+                key={s.id}
+                className="island-card"
+                style={{
+                  background: "#EAF7FF",
+                  borderColor: "#8FD3F4",
+                }}
+                onClick={() =>
+                  onSelectStudent(s.id)
+                }
+              >
+                <div
+                  className="island-icon"
+                  style={{
+                    background: "#8FD3F4",
+                    fontWeight: 800,
+                    color: "#fff",
+                  }}
+                >
+                  {s.name.charAt(0).toUpperCase()}
+                </div>
+
+                <div className="island-name">
+                  {s.name}
+                </div>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p
+            className="sub"
+            style={{ marginTop: 16 }}
+          >
+            Ainda não há alunos registados
+            neste ano. Pede ao professor
+            para te adicionar.
+          </p>
+        )}
+
+        <button
+          className="ghost-btn"
+          style={{ marginTop: 18 }}
+          onClick={onOpenTeacher}
+        >
+          🔑 Acesso do professor
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function StudentPinScreen({
+  student,
+  onBack,
+  onSuccess,
+}) {
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState(false);
+
+  if (!student) {
+    return (
+      <div className="screen setup-screen">
+        <div className="setup-card">
+          <p className="sub">
+            Não foi possível encontrar este
+            aluno.
+          </p>
+
+          <button
+            className="ghost-btn"
+            onClick={onBack}
+          >
+            ← Voltar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault();
+
+    if (pin === student.pin) {
+      onSuccess(student);
+    } else {
+      setError(true);
+      setPin("");
+    }
+  }
+
+  return (
+    <div className="screen setup-screen">
+      <div className="setup-card">
+        <button
+          className="ghost-btn"
+          onClick={onBack}
+        >
+          ← Voltar
+        </button>
+
+        <h1 style={{ marginTop: 12 }}>
+          Olá, {student.name}!
+        </h1>
+
+        <p className="sub">
+          Escreve o teu PIN para entrares.
+        </p>
+
+        <form onSubmit={handleSubmit}>
+          <input
+            type="password"
+            inputMode="numeric"
+            maxLength={4}
+            className="text-input"
+            autoFocus
+            value={pin}
+            onChange={(e) => {
+              setError(false);
+              setPin(e.target.value);
+            }}
+          />
+
+          {error && (
+            <p
+              className="feedback-line wrong"
+              style={{ marginTop: 8 }}
+            >
+              PIN incorreto. Pede ajuda ao
+              professor.
+            </p>
+          )}
+
+          <button
+            type="submit"
+            className="btn-primary big"
+            disabled={pin.length < 4}
+          >
+            Entrar
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function TeacherPinScreen({
+  correctPin,
+  onBack,
+  onSuccess,
+}) {
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState(false);
+
+  function handleSubmit(e) {
+    e.preventDefault();
+
+    if (pin === correctPin) {
+      onSuccess();
+    } else {
+      setError(true);
+      setPin("");
+    }
+  }
+
+  return (
+    <div className="screen setup-screen">
+      <div className="setup-card">
+        <button
+          className="ghost-btn"
+          onClick={onBack}
+        >
+          ← Voltar
+        </button>
+
+        <h1 style={{ marginTop: 12 }}>
+          Área do professor
+        </h1>
+
+        <p className="sub">
+          Insere o PIN de administração.
+        </p>
+
+        <form onSubmit={handleSubmit}>
+          <input
+            type="password"
+            inputMode="numeric"
+            maxLength={6}
+            className="text-input"
+            autoFocus
+            value={pin}
+            onChange={(e) => {
+              setError(false);
+              setPin(e.target.value);
+            }}
+          />
+
+          {error && (
+            <p
+              className="feedback-line wrong"
+              style={{ marginTop: 8 }}
+            >
+              PIN incorreto.
+            </p>
+          )}
+
+          <button
+            type="submit"
+            className="btn-primary big"
+          >
+            Entrar
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/* --------------------------- Teacher dashboard --------------------------- */
+
+function TeacherDashboard({
+  students,
+  teacherPin,
+  onReload,
+  onExit,
+}) {
+  const [name, setName] = useState("");
+  const [grade, setGrade] = useState(1);
+  const [pin, setPin] = useState("");
+  const [editingId, setEditingId] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [newPin, setNewPin] = useState(teacherPin);
+
+  function startEdit(student) {
+    setEditingId(student.id);
+    setName(student.name);
+    setGrade(student.grade);
+    setPin(student.pin);
+  }
+
+  function clearForm() {
+    setEditingId(null);
+    setName("");
+    setGrade(1);
+    setPin("");
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+
+    const cleanName = name.trim();
+    const cleanPin = pin.trim();
+
+    if (!cleanName || cleanPin.length < 4) return;
+
+    setSaving(true);
+
+    try {
+      if (editingId) {
+        await updateStudentInfo(editingId, {
+          name: cleanName,
+          grade: Number(grade),
+          pin: cleanPin,
+        });
+      } else {
+        await createStudent({
+          name: cleanName,
+          grade: Number(grade),
+          pin: cleanPin,
+        });
+      }
+
+      clearForm();
+      onReload();
+    } catch (err) {
+      alert(
+        "Erro ao guardar aluno: " +
+          err.message
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(id) {
+    if (
+      !confirm(
+        "Remover este aluno? O progresso dele será apagado."
+      )
+    ) {
+      return;
+    }
+
+    await deleteStudent(id);
+    onReload();
+  }
+
+  async function handleTeacherPinSave() {
+    const cleanPin = newPin.trim();
+
+    if (cleanPin.length < 4) return;
+
+    await saveTeacherPin(cleanPin);
+    alert("PIN do professor atualizado.");
+  }
+
+  return (
+    <div className="screen setup-screen">
+      <div
+        className="setup-card"
+        style={{ maxWidth: 640 }}
+      >
+        <button
+          className="ghost-btn"
+          onClick={onExit}
+        >
+          ← Sair da área do professor
+        </button>
+
+        <h1 style={{ marginTop: 12 }}>
+          Gerir alunos
+        </h1>
+
+        <p className="sub">
+          Regista o nome, o ano e o PIN de
+          cada aluno da turma.
+        </p>
+
+        <form
+          onSubmit={handleSubmit}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 8,
+          }}
+        >
+          <span className="field-label">
+            Nome do aluno
+          </span>
+
+          <input
+            className="text-input"
+            value={name}
+            onChange={(e) =>
+              setName(e.target.value)
+            }
+            placeholder="Nome"
+          />
+
+          <span className="field-label">
+            Ano de escolaridade
+          </span>
+
+          <div className="chip-row">
+            {[1, 2, 3, 4, 5, 6].map((g) => (
+              <button
+                key={g}
+                type="button"
+                className={`pill ${
+                  Number(grade) === g
+                    ? "selected"
+                    : ""
+                }`}
+                onClick={() => setGrade(g)}
+              >
+                {g}.º
+              </button>
+            ))}
+          </div>
+
+          <span className="field-label">
+            PIN (4 dígitos)
+          </span>
+
+          <input
+            className="text-input"
+            value={pin}
+            maxLength={4}
+            inputMode="numeric"
+            onChange={(e) =>
+              setPin(e.target.value)
+            }
+            placeholder="Ex.: 1234"
+          />
+
+          <div
+            style={{
+              display: "flex",
+              gap: 10,
+              marginTop: 10,
+            }}
+          >
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={saving}
+            >
+              {editingId
+                ? "Guardar alterações"
+                : "Adicionar aluno"}
+            </button>
+
+            {editingId && (
+              <button
+                type="button"
+                className="ghost-btn"
+                onClick={clearForm}
+              >
+                Cancelar edição
+              </button>
+            )}
+          </div>
+        </form>
+
+        <span
+          className="field-label"
+          style={{ marginTop: 26, display: "block" }}
+        >
+          Alunos da turma
+        </span>
+
+        <div className="word-grid" style={{ marginTop: 8 }}>
+          {students.length === 0 && (
+            <p className="sub">
+              Ainda não há alunos registados.
+            </p>
+          )}
+
+          {students.map((s) => (
+            <div
+              key={s.id}
+              className="word-card"
+              style={{ borderColor: "#E7E1D3" }}
+            >
+              <div className="word-emoji">
+                {s.name.charAt(0).toUpperCase()}
+              </div>
+
+              <div className="word-name">
+                {s.name}
+              </div>
+
+              <div className="island-progress">
+                {s.grade}.º Ano · PIN {s.pin}
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: 8,
+                  marginTop: 6,
+                }}
+              >
+                <button
+                  className="ghost-btn"
+                  onClick={() => startEdit(s)}
+                >
+                  Editar
+                </button>
+
+                <button
+                  className="ghost-btn"
+                  onClick={() =>
+                    handleDelete(s.id)
+                  }
+                >
+                  Remover
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <span
+          className="field-label"
+          style={{ marginTop: 26, display: "block" }}
+        >
+          PIN do professor
+        </span>
+
+        <div
+          style={{
+            display: "flex",
+            gap: 10,
+            marginTop: 6,
+          }}
+        >
+          <input
+            className="text-input"
+            value={newPin}
+            maxLength={6}
+            onChange={(e) =>
+              setNewPin(e.target.value)
+            }
+          />
+
+          <button
+            className="btn-primary"
+            onClick={handleTeacherPinSave}
+          >
+            Guardar PIN
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -978,6 +1691,7 @@ function MapScreen({
   totalStars,
   onOpenCategory,
   onReset,
+  onLogout,
 }) {
   const [
     confirmingReset,
@@ -1006,14 +1720,29 @@ function MapScreen({
           </div>
         </div>
 
-        <button
-          className="ghost-btn"
-          onClick={() =>
-            setConfirmingReset(true)
-          }
+        <div
+          style={{
+            display: "flex",
+            gap: 6,
+            alignItems: "center",
+          }}
         >
-          Recomeçar
-        </button>
+          <button
+            className="ghost-btn"
+            onClick={onLogout}
+          >
+            Trocar de aluno
+          </button>
+
+          <button
+            className="ghost-btn"
+            onClick={() =>
+              setConfirmingReset(true)
+            }
+          >
+            Recomeçar
+          </button>
+        </div>
       </header>
 
       <h1 className="map-title">

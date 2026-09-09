@@ -10,6 +10,7 @@ function App() {
   const [teacher, setTeacher] = useState(null);
   const [students, setStudents] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [selectedModuleId, setSelectedModuleId] = useState(1)
   const [selectedGrade, setSelectedGrade] = useState(1);
   const [words, setWords] = useState([]);
   const [progress, setProgress] = useState({});
@@ -562,13 +563,16 @@ function App() {
 
   // 4. ECRÃ: Visão do Aluno / Jogo
   if (currentView === "game") {
-    // Filtra módulos pelo ano escolar do aluno
-    const availableModules = GAME_MODULES.filter(m => (currentStudent?.grade || 1) >= m.minGrade);
+    // 1. Obtém o ano do aluno (usa selectedStudent com fallback de segurança para 1)
+    const studentGrade = selectedStudent?.grade || 1;
+
+    // 2. Filtra os módulos disponíveis com base no ano escolar do aluno
+    const availableModules = GAME_MODULES.filter(m => studentGrade >= m.minGrade);
     const activeModuleId = selectedModuleId || 1;
     const currentModule = GAME_MODULES.find(m => m.id === activeModuleId) || GAME_MODULES[0];
 
-    // Filtra palavras pelo ano e tema
-    const currentGradeWords = words.filter(w => w.grade === currentStudent?.grade);
+    // 3. Filtra palavras pelo ano e pelo tema selecionado
+    const currentGradeWords = words.filter(w => w.grade === studentGrade);
     const availableThemes = [...new Set(currentGradeWords.map(w => w.theme || "Geral"))];
     const activeTheme = selectedTheme || availableThemes[0] || "Geral";
     const filteredWords = currentGradeWords.filter(w => (w.theme || "Geral") === activeTheme);
@@ -580,24 +584,31 @@ function App() {
           {/* Cabeçalho */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '12px', flexWrap: 'wrap' }}>
             <div>
-              <h2 style={{ margin: 0 }}>Jardim de {currentStudent?.name}</h2>
+              <h2 style={{ margin: 0 }}>Jardim de {selectedStudent?.name}</h2>
               <span style={{ fontSize: '0.9rem', color: '#6b7280' }}>
-                {currentStudent?.grade}.º Ano • ⭐ {Object.keys(studentProgress).length} Concluídas
+                {studentGrade}.º Ano • ⭐ {Object.keys(progress || {}).length} Concluídas
               </span>
             </div>
 
+            {/* Ação: Se houver professor faz "Voltar ao Painel", senão faz "Sair" */}
             {teacher ? (
               <button onClick={() => setCurrentView("dashboard")} className="btn btn-outline">
                 ← Voltar ao Painel
               </button>
             ) : (
-              <button onClick={() => { setCurrentStudent(null); setCurrentView("student_select"); }} className="btn btn-outline">
+              <button 
+                onClick={() => { 
+                  setSelectedStudent(null); 
+                  setCurrentView("student_select"); 
+                }} 
+                className="btn btn-outline"
+              >
                 Sair
               </button>
             )}
           </div>
 
-          {/* SELETOR DE MÓDULOS (Filtro Inteligente por Ano) */}
+          {/* SELETOR DE MÓDULOS */}
           <div style={{ marginBottom: '20px', backgroundColor: '#F3F4F6', padding: '12px', borderRadius: '12px' }}>
             <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4B5563', display: 'block', marginBottom: '8px' }}>
               Escolhe o Módulo de Aprendizagem:
@@ -648,12 +659,12 @@ function App() {
           {/* GRELHA DE PALAVRAS */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '16px' }}>
             {filteredWords.map((word) => {
-              const isCompleted = !!studentProgress[word.id];
+              const isCompleted = !!(progress && progress[word.id]);
               return (
                 <div
                   key={word.id}
                   onClick={() => {
-                    setSelectedWord(word);
+                    setCurrentWord(word);
                     setCurrentView("exercise");
                   }}
                   style={{

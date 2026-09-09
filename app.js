@@ -239,7 +239,7 @@ function App() {
             onClick={() => setCurrentView(teacher ? "dashboard" : "auth")}
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d97706' }}
           >
-            🔑 Acesso do professor
+            🦉 Acesso do professor
           </button>
         </div>
       </div>

@@ -103,6 +103,85 @@ async function verifyStudentPin(studentId, pin) {
   return data;
 }
 
+// 4. GESTÃO DE PALAVRAS
+function slugifyWordId(word, grade) {
+  const base = word
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-+|-+$)/g, "");
+
+  return `${base || "palavra"}-${grade}`;
+}
+
+async function getAllWords() {
+  const { data, error } = await supabase
+    .from("words")
+    .select("*")
+    .order("grade")
+    .order("word");
+
+  if (error) {
+    console.error("Erro ao carregar palavras:", error);
+    return [];
+  }
+  return data;
+}
+
+async function createWord({ word, grade, emoji, hint, blankBefore, blankAfter }) {
+  const id = slugifyWordId(word, grade);
+
+  const { data, error } = await supabase
+    .from("words")
+    .insert([
+      {
+        id,
+        grade: parseInt(grade),
+        word,
+        emoji,
+        hint,
+        blank_before: blankBefore || "",
+        blank_after: blankAfter || "",
+      },
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    if (error.code === "23505") {
+      throw new Error("Já existe uma palavra igual registada nesse ano.");
+    }
+    throw error;
+  }
+
+  return data;
+}
+
+async function updateWord(id, { word, grade, emoji, hint, blankBefore, blankAfter }) {
+  const { error } = await supabase
+    .from("words")
+    .update({
+      word,
+      grade: parseInt(grade),
+      emoji,
+      hint,
+      blank_before: blankBefore || "",
+      blank_after: blankAfter || "",
+    })
+    .eq("id", id);
+
+  if (error) throw error;
+}
+
+async function deleteWord(id) {
+  // apaga primeiro o progresso associado, já que não há FK a garantir isso
+  await supabase.from("student_progress").delete().eq("word_id", id);
+
+  const { error } = await supabase.from("words").delete().eq("id", id);
+  if (error) throw error;
+}
+
 // 3. PALAVRAS E PROGRESSO
 async function getWordsByGrade(grade) {
   const { data, error } = await supabase

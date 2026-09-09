@@ -24,6 +24,17 @@ function App() {
   const [newStudentPin, setNewStudentPin] = useState("");
   const [newStudentGrade, setNewStudentGrade] = useState("1");
 
+  const [dashboardTab, setDashboardTab] = useState("alunos");
+  const [allWords, setAllWords] = useState([]);
+  const [editingWordId, setEditingWordId] = useState(null);
+  const [wordText, setWordText] = useState("");
+  const [wordGrade, setWordGrade] = useState("1");
+  const [wordEmoji, setWordEmoji] = useState("");
+  const [wordHint, setWordHint] = useState("");
+  const [wordBlankBefore, setWordBlankBefore] = useState("");
+  const [wordBlankAfter, setWordBlankAfter] = useState("");
+  const [savingWord, setSavingWord] = useState(false);
+
   // Carregar alunos e sessão ao iniciar
   useEffect(() => {
     async function initApp() {
@@ -64,6 +75,69 @@ function App() {
     } catch (err) {
       alert("Erro ao criar aluno: " + err.message);
     }
+  };
+
+  // Ações do professor sobre as palavras
+  const clearWordForm = () => {
+    setEditingWordId(null);
+    setWordText("");
+    setWordGrade("1");
+    setWordEmoji("");
+    setWordHint("");
+    setWordBlankBefore("");
+    setWordBlankAfter("");
+  };
+
+  const openWordsTab = async () => {
+    setDashboardTab("palavras");
+    setAllWords(await getAllWords());
+  };
+
+  const startEditWord = (w) => {
+    setEditingWordId(w.id);
+    setWordText(w.word);
+    setWordGrade(String(w.grade));
+    setWordEmoji(w.emoji || "");
+    setWordHint(w.hint || "");
+    setWordBlankBefore(w.blank_before || "");
+    setWordBlankAfter(w.blank_after || "");
+  };
+
+  const handleWordSubmit = async (e) => {
+    e.preventDefault();
+    const payload = {
+      word: wordText.trim(),
+      grade: wordGrade,
+      emoji: wordEmoji.trim(),
+      hint: wordHint.trim(),
+      blankBefore: wordBlankBefore,
+      blankAfter: wordBlankAfter,
+    };
+
+    if (!payload.word || !payload.emoji || !payload.hint) return;
+
+    setSavingWord(true);
+    try {
+      if (editingWordId) {
+        await updateWord(editingWordId, payload);
+      } else {
+        await createWord(payload);
+      }
+      clearWordForm();
+      setAllWords(await getAllWords());
+    } catch (err) {
+      alert("Erro ao guardar palavra: " + err.message);
+    } finally {
+      setSavingWord(false);
+    }
+  };
+
+  const handleDeleteWord = async (id) => {
+    if (!confirm("Remover esta palavra? O progresso dos alunos nesta palavra também será apagado.")) {
+      return;
+    }
+    await deleteWord(id);
+    setAllWords(await getAllWords());
   };
 
   // Ações do Aluno
@@ -279,73 +353,208 @@ function App() {
           </div>
           <p>Prof. {teacher?.name} ({teacher?.school || "Escola"})</p>
 
-          <hr style={{ margin: '16px 0' }} />
-
-          <h3>Criar Novo Aluno</h3>
-          
-          {/* autoComplete="off" e labels previnem que o browser preencha com os dados do professor */}
-          <form 
-            onSubmit={handleCreateStudent} 
-            autoComplete="off"
-            style={{ display: 'grid', gap: '12px', gridTemplateColumns: '1fr 1fr 1fr auto', alignItems: 'end', marginTop: '12px' }}
-          >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Nome do Aluno</label>
-              <input
-                type="text"
-                className="input"
-                placeholder="Ex: Zé Maria"
-                value={newStudentName}
-                onChange={(e) => setNewStudentName(e.target.value)}
-                autoComplete="off"
-                required
-              />
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>PIN do Aluno</label>
-              <input
-                type="text"
-                inputMode="numeric"
-                className="input"
-                placeholder="Ex: 1234"
-                value={newStudentPin}
-                onChange={(e) => setNewStudentPin(e.target.value)}
-                autoComplete="new-password"
-                required
-              />
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Ano Escolar</label>
-              <select className="input" value={newStudentGrade} onChange={(e) => setNewStudentGrade(e.target.value)}>
-                <option value="1">1.º Ano</option>
-                <option value="2">2.º Ano</option>
-                <option value="3">3.º Ano</option>
-                <option value="4">4.º Ano</option>
-                <option value="5">5.º Ano</option>
-                <option value="6">6.º Ano</option>
-              </select>
-            </div>
-
-            <button type="submit" className="btn btn-primary" style={{ height: '42px' }}>Adicionar</button>
-          </form>
-
-          <hr style={{ margin: '24px 0' }} />
-
-          <h3>Alunos Registados ({students.length})</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px', marginTop: '12px' }}>
-            {students.map((student) => (
-              <div key={student.id} style={{ border: '1px solid #ddd', padding: '12px', borderRadius: '8px', backgroundColor: '#fafafa' }}>
-                <h4 style={{ margin: '0 0 4px 0', color: '#111827' }}>{student.name}</h4>
-                <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>{student.grade}.º Ano</p>
-              </div>
-            ))}
+          <div style={{ display: 'flex', gap: '8px', margin: '16px 0' }}>
+            <button
+              type="button"
+              className={`btn ${dashboardTab === "alunos" ? "btn-primary" : "btn-outline"}`}
+              onClick={() => setDashboardTab("alunos")}
+            >
+              Alunos
+            </button>
+            <button
+              type="button"
+              className={`btn ${dashboardTab === "palavras" ? "btn-primary" : "btn-outline"}`}
+              onClick={openWordsTab}
+            >
+              Gerir palavras
+            </button>
           </div>
 
-          <button className="btn btn-outline" style={{ marginTop: '20px' }} onClick={() => setCurrentView("student_select")}>
-            Ver Visão do Aluno
-          </button>
+          <hr style={{ margin: '16px 0' }} />
+
+          {dashboardTab === "alunos" && (
+            <React.Fragment>
+              <h3>Criar Novo Aluno</h3>
+
+              {/* autoComplete="off" e labels previnem que o browser preencha com os dados do professor */}
+              <form 
+                onSubmit={handleCreateStudent} 
+                autoComplete="off"
+                style={{ display: 'grid', gap: '12px', gridTemplateColumns: '1fr 1fr 1fr auto', alignItems: 'end', marginTop: '12px' }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Nome do Aluno</label>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="Ex: Zé Maria"
+                    value={newStudentName}
+                    onChange={(e) => setNewStudentName(e.target.value)}
+                    autoComplete="off"
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>PIN do Aluno</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    className="input"
+                    placeholder="Ex: 1234"
+                    value={newStudentPin}
+                    onChange={(e) => setNewStudentPin(e.target.value)}
+                    autoComplete="new-password"
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Ano Escolar</label>
+                  <select className="input" value={newStudentGrade} onChange={(e) => setNewStudentGrade(e.target.value)}>
+                    <option value="1">1.º Ano</option>
+                    <option value="2">2.º Ano</option>
+                    <option value="3">3.º Ano</option>
+                    <option value="4">4.º Ano</option>
+                    <option value="5">5.º Ano</option>
+                    <option value="6">6.º Ano</option>
+                  </select>
+                </div>
+
+                <button type="submit" className="btn btn-primary" style={{ height: '42px' }}>Adicionar</button>
+              </form>
+
+              <hr style={{ margin: '24px 0' }} />
+
+              <h3>Alunos Registados ({students.length})</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px', marginTop: '12px' }}>
+                {students.map((student) => (
+                  <div key={student.id} style={{ border: '1px solid #ddd', padding: '12px', borderRadius: '8px', backgroundColor: '#fafafa' }}>
+                    <h4 style={{ margin: '0 0 4px 0', color: '#111827' }}>{student.name}</h4>
+                    <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>{student.grade}.º Ano</p>
+                  </div>
+                ))}
+              </div>
+
+              <button className="btn btn-outline" style={{ marginTop: '20px' }} onClick={() => setCurrentView("student_select")}>
+                Ver Visão do Aluno
+              </button>
+            </React.Fragment>
+          )}
+
+          {dashboardTab === "palavras" && (
+            <React.Fragment>
+              <h3>{editingWordId ? "Editar Palavra" : "Criar Nova Palavra"}</h3>
+
+              <form
+                onSubmit={handleWordSubmit}
+                autoComplete="off"
+                style={{ display: 'grid', gap: '12px', gridTemplateColumns: '1fr 1fr', marginTop: '12px' }}
+              >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Palavra</label>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="Ex: gato"
+                    value={wordText}
+                    onChange={(e) => setWordText(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Ano Escolar</label>
+                  <select className="input" value={wordGrade} onChange={(e) => setWordGrade(e.target.value)}>
+                    <option value="1">1.º Ano</option>
+                    <option value="2">2.º Ano</option>
+                    <option value="3">3.º Ano</option>
+                    <option value="4">4.º Ano</option>
+                    <option value="5">5.º Ano</option>
+                    <option value="6">6.º Ano</option>
+                  </select>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Emoji</label>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="Ex: 🐱"
+                    value={wordEmoji}
+                    onChange={(e) => setWordEmoji(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Dica</label>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="Ex: Animal doméstico que mia."
+                    value={wordHint}
+                    onChange={(e) => setWordHint(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Início da frase</label>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="Ex: O "
+                    value={wordBlankBefore}
+                    onChange={(e) => setWordBlankBefore(e.target.value)}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Fim da frase</label>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="Ex:  dorme no sofá."
+                    value={wordBlankAfter}
+                    onChange={(e) => setWordBlankAfter(e.target.value)}
+                  />
+                </div>
+
+                <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '10px' }}>
+                  <button type="submit" className="btn btn-primary" disabled={savingWord}>
+                    {editingWordId ? "Guardar alterações" : "Adicionar palavra"}
+                  </button>
+
+                  {editingWordId && (
+                    <button type="button" className="btn btn-outline" onClick={clearWordForm}>
+                      Cancelar edição
+                    </button>
+                  )}
+                </div>
+              </form>
+
+              <p style={{ marginTop: '8px', color: '#6b7280', fontSize: '0.85rem' }}>
+                Pré-visualização da frase: "{wordBlankBefore}<strong>{wordText || "..."}</strong>{wordBlankAfter}"
+              </p>
+
+              <hr style={{ margin: '24px 0' }} />
+
+              <h3>Palavras Registadas ({allWords.length})</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px', marginTop: '12px' }}>
+                {allWords.map((w) => (
+                  <div key={w.id} style={{ border: '1px solid #ddd', padding: '12px', borderRadius: '8px', backgroundColor: '#fafafa' }}>
+                    <h4 style={{ margin: '0 0 4px 0', color: '#111827' }}>{w.emoji} {w.word}</h4>
+                    <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>{w.grade}.º Ano</p>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                      <button type="button" className="link-btn" onClick={() => startEditWord(w)}>Editar</button>
+                      <button type="button" className="link-btn" onClick={() => handleDeleteWord(w.id)}>Remover</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </React.Fragment>
+          )}
         </div>
       </div>
     );

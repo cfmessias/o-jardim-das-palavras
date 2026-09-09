@@ -451,7 +451,7 @@ function App() {
       </div>
     );
   }
-
+}
 const rootElement = document.getElementById("root");
 if (rootElement) {
   ReactDOM.render(<App />, rootElement);

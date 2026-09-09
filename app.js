@@ -350,67 +350,107 @@ function App() {
   }
 
   // 4. ECRÃ: O Jogo
-  return (
-    <div className="container">
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <button onClick={() => setCurrentView("student_select")} className="btn btn-outline">
-          ← Voltar à Seleção
-        </button>
-        <div>
-          Jardim de <strong>{selectedStudent.name}</strong> ({selectedStudent.grade}.º Ano)
-          <StarBadge stars={totalStars} />
-        </div>
-      </header>
+// 4. ECRÃ: Visão do Aluno / Jogo
+  if (currentView === "game") {
+    // Filtra palavras pelo ano do aluno e tema selecionado
+    const currentGradeWords = words.filter(w => w.grade === currentStudent?.grade);
+    const availableThemes = [...new Set(currentGradeWords.map(w => w.theme || "Geral"))];
+    
+    // Tema ativo por omissão
+    const activeTheme = selectedTheme || availableThemes[0] || "Geral";
+    const filteredWords = currentGradeWords.filter(w => (w.theme || "Geral") === activeTheme);
 
-      <main className="card">
-        <nav style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat.id}
-              className={`btn ${activeCategory === cat.id ? "btn-primary" : "btn-outline"}`}
-              onClick={() => {
-                setActiveCategory(cat.id);
-                setCurrentWord(null);
-              }}
-            >
-              {cat.label}
-            </button>
-          ))}
-        </nav>
+    return (
+      <div className="container" style={{ maxWidth: '900px', margin: '0 auto', padding: '16px' }}>
+        <div className="card" style={{ padding: '24px' }}>
+          
+          {/* Cabeçalho Limpo e Alinhado */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '12px', flexWrap: 'wrap' }}>
+            <div>
+              <h2 style={{ margin: 0 }}>Jardim de {currentStudent?.name}</h2>
+              <span style={{ fontSize: '0.9rem', color: '#6b7280' }}>
+                {currentStudent?.grade}.º Ano • ⭐ {Object.keys(studentProgress).length} Palavras Concluídas
+              </span>
+            </div>
 
-        {!currentWord ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '12px' }}>
-            {words.map((w) => {
-              const wordStage = progress[w.id]?.stage || 0;
+            {/* Ação condicional: Professor volta ao Dashboard, Aluno faz Sair */}
+            {teacher ? (
+              <button 
+                onClick={() => setCurrentView("dashboard")} 
+                className="btn btn-outline"
+              >
+                ← Voltar ao Painel
+              </button>
+            ) : (
+              <button 
+                onClick={() => {
+                  setCurrentStudent(null);
+                  setCurrentView("student_select");
+                }} 
+                className="btn btn-outline"
+              >
+                Sair
+              </button>
+            )}
+          </div>
+
+          {/* Seletores de Temas */}
+          {availableThemes.length > 0 ? (
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
+              {availableThemes.map((theme) => (
+                <button
+                  key={theme}
+                  onClick={() => setSelectedTheme(theme)}
+                  className={`btn ${activeTheme === theme ? 'btn-primary' : 'btn-outline'}`}
+                  style={{
+                    backgroundColor: activeTheme === theme ? '#e55835' : '#ffffff',
+                    color: activeTheme === theme ? '#ffffff' : '#374151',
+                    borderColor: '#e5e7eb'
+                  }}
+                >
+                  {theme}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p style={{ color: '#6b7280' }}>Sem palavras disponíveis para o {currentStudent?.grade}.º ano.</p>
+          )}
+
+          <hr style={{ margin: '20px 0', border: '0', borderTop: '1px solid #e5e7eb' }} />
+
+          {/* Grelha de Palavras do Tema */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '16px' }}>
+            {filteredWords.map((word) => {
+              const isCompleted = !!studentProgress[word.id];
               return (
                 <div
-                  key={w.id}
-                  onClick={() => setCurrentWord(w)}
-                  style={{ border: '1px solid #ccc', padding: '12px', borderRadius: '8px', cursor: 'pointer', textAlign: 'center' }}
+                  key={word.id}
+                  onClick={() => {
+                    setSelectedWord(word);
+                    setCurrentView("exercise");
+                  }}
+                  style={{
+                    padding: '16px',
+                    borderRadius: '12px',
+                    border: '2px solid',
+                    borderColor: isCompleted ? '#10b981' : '#e5e7eb',
+                    backgroundColor: isCompleted ? '#ecfdf5' : '#f9fafb',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    transition: 'transform 0.1s'
+                  }}
                 >
-                  <div style={{ fontSize: '2rem' }}>{w.emoji}</div>
-                  <div>{w.word}</div>
-                  <ProgressDots stage={wordStage} />
+                  <div style={{ fontSize: '2rem', marginBottom: '8px' }}>{word.emoji || "🌻"}</div>
+                  <div style={{ fontWeight: 'bold', color: '#111827' }}>{word.word}</div>
                 </div>
               );
             })}
           </div>
-        ) : (
-          <div>
-            <button onClick={() => setCurrentWord(null)} className="btn btn-outline" style={{ marginBottom: '12px' }}>
-              ✖ Fechar Palavra
-            </button>
-            <ActivityStages
-              word={currentWord}
-              stage={progress[currentWord.id]?.stage || 0}
-              onComplete={handleStageComplete}
-            />
-          </div>
-        )}
-      </main>
-    </div>
-  );
-}
+
+        </div>
+      </div>
+    );
+  }
 
 const rootElement = document.getElementById("root");
 if (rootElement) {

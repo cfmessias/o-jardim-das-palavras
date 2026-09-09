@@ -734,8 +734,8 @@ function App() {
             </div>
           )}
 
-          {/* Módulo 4: Desafios Visuais */}
-          {activeModuleId === 4 && (
+          {/* Módulo 3: Desafios Visuais */}
+          {activeModuleId === 3 && (
             <div style={{ textAlign: 'center', padding: '20px' }}>
               <h3>Módulo 4: Desafio Visual</h3>
               <div style={{ fontSize: '4rem', margin: '20px 0' }}>{currentWord.emoji}</div>

@@ -717,17 +717,30 @@ function App() {
             />
           )}
 
-          {/* Módulo 2: Ditado, Sílabas e Letra em Falta */}
+          {/* Módulo 2: Ditado & Ortografia */}
           {activeModuleId === 2 && (
             <div>
-              <h3 style={{ textAlign: 'center', color: '#374151' }}>Módulo 2: Ditado & Ortografia</h3>
+              <h3 style={{ textAlign: 'center', color: '#374151', marginBottom: '20px' }}>
+                Módulo 2: Ouvir e Decompor
+              </h3>
+
               <ListenAndWriteExercise 
                 word={currentWord} 
                 onSuccess={() => {
+                  const logText = `Concluído Módulo 2: ${currentWord.word}`;
+                  
+                  // Guarda o progresso no Supabase / DB local
                   if (typeof saveProgress === 'function') {
-                    saveProgress(selectedStudent.id, currentWord.id, 3, "Concluído via Ditado");
+                    saveProgress(selectedStudent.id, currentWord.id, 3, logText);
                   }
-                  alert("Excelente! Ganhaste mais 1 estrela! ⭐");
+
+                  // Atualiza o estado local imediatamente para refletir a estrela
+                  setProgress(prev => ({
+                    ...prev,
+                    [currentWord.id]: 3
+                  }));
+
+                  alert("Excelente! Ditado superado com sucesso! ⭐");
                   setCurrentView("game");
                 }} 
               />

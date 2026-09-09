@@ -349,7 +349,7 @@ function App() {
       <div className="container">
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2>Painel do Professor</h2>
+            <h2>👨‍🏫Painel do Professor</h2>
             <button onClick={handleLogout} className="btn btn-outline">Sair</button>
           </div>
           <p>Prof. {teacher?.name} ({teacher?.school || "Escola"})</p>

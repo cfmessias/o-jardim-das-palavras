@@ -16,15 +16,15 @@ const GAME_MODULES = [
   },
   {
     id: 3,
-    title: "Módulo 3: Gramática e Ortografia Avançada",
-    description: "Singular/Plural, Sinónimos/Antónimos e Caça ao Erro",
-    minGrade: 3 // Restrito a partir do 3.º Ano
+    title: "Módulo 3: Desafios Visuais",
+    description: "Jogo da memória e associação palavra-imagem",
+    minGrade: 1
   },
   {
     id: 4,
-    title: "Módulo 4: Desafios Visuais",
-    description: "Jogo da memória e associação palavra-imagem",
-    minGrade: 1
+    title: "Módulo 4: Gramática e Ortografia Avançada",
+    description: "Singular/Plural, Sinónimos/Antónimos e Caça ao Erro",
+    minGrade: 3 // Restrito a partir do 3.º Ano
   }
 ];
 

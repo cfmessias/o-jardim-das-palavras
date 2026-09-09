@@ -183,7 +183,7 @@ function App() {
     return (
       <div className="container">
         <div className="card">
-          <h2>🤓 Quem vai jogar hoje?</h2>
+          <h2>Quem vai jogar hoje?</h2>
           <p className="subtitle">Escolhe o teu ano e depois o teu nome na lista da turma.</p>
 
           <div className="grade-selector" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', margin: '20px 0' }}>
@@ -214,15 +214,15 @@ function App() {
           </div>
 
           {filteredStudents.length > 0 ? (
-            <div className="students-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px', marginTop: '16px' }}>
+            <div className="students-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '16px' }}>
               {filteredStudents.map((s) => (
                 <button
                   key={s.id}
                   className="btn btn-outline student-card-btn"
                   onClick={() => handleSelectStudent(s)}
-                  style={{ padding: '16px', borderRadius: '12px', textAlign: 'center' }}
+                  style={{ padding: '10px 22px', borderRadius: '25px' }}
                 >
-                  <div style={{ fontSize: '1.1rem', fontWeight: 'bold' }}>{s.name}</div>
+                  <div style={{ fontSize: '1rem', fontWeight: '600' }}>{s.name}</div>
                 </button>
               ))}
             </div>

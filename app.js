@@ -560,55 +560,71 @@ function App() {
     );
   }
 
-  // 4. ECRÃ: O Jogo
-// 4. ECRÃ: Visão do Aluno / Jogo
+  // 4. ECRÃ: Visão do Aluno / Jogo
   if (currentView === "game") {
-    // words já vem filtrado pelo ano do aluno (getWordsByGrade), só falta agrupar por tema
-    const availableThemes = [...new Set(words.map(w => w.theme || "Geral"))];
-    
-    // Tema ativo por omissão
+    // Filtra módulos pelo ano escolar do aluno
+    const availableModules = GAME_MODULES.filter(m => (currentStudent?.grade || 1) >= m.minGrade);
+    const activeModuleId = selectedModuleId || 1;
+    const currentModule = GAME_MODULES.find(m => m.id === activeModuleId) || GAME_MODULES[0];
+
+    // Filtra palavras pelo ano e tema
+    const currentGradeWords = words.filter(w => w.grade === currentStudent?.grade);
+    const availableThemes = [...new Set(currentGradeWords.map(w => w.theme || "Geral"))];
     const activeTheme = selectedTheme || availableThemes[0] || "Geral";
-    const filteredWords = words.filter(w => (w.theme || "Geral") === activeTheme);
-    const masteredCount = Object.values(progress).filter(p => (p.stage || 0) >= 3).length;
+    const filteredWords = currentGradeWords.filter(w => (w.theme || "Geral") === activeTheme);
 
     return (
       <div className="container" style={{ maxWidth: '900px', margin: '0 auto', padding: '16px' }}>
         <div className="card" style={{ padding: '24px' }}>
           
-          {/* Cabeçalho Limpo e Alinhado */}
+          {/* Cabeçalho */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '12px', flexWrap: 'wrap' }}>
             <div>
-              <h2 style={{ margin: 0 }}>Jardim de {selectedStudent?.name}</h2>
+              <h2 style={{ margin: 0 }}>Jardim de {currentStudent?.name}</h2>
               <span style={{ fontSize: '0.9rem', color: '#6b7280' }}>
-                {selectedStudent?.grade}.º Ano • {masteredCount} Palavras Concluídas
+                {currentStudent?.grade}.º Ano • ⭐ {Object.keys(studentProgress).length} Concluídas
               </span>
             </div>
 
-            <StarBadge stars={totalStars} />
-
-            {/* Ação condicional: Professor volta ao Dashboard, Aluno faz Sair */}
             {teacher ? (
-              <button 
-                onClick={() => setCurrentView("dashboard")} 
-                className="btn btn-outline"
-              >
+              <button onClick={() => setCurrentView("dashboard")} className="btn btn-outline">
                 ← Voltar ao Painel
               </button>
             ) : (
-              <button 
-                onClick={() => {
-                  setSelectedStudent(null);
-                  setCurrentView("student_select");
-                }} 
-                className="btn btn-outline"
-              >
+              <button onClick={() => { setCurrentStudent(null); setCurrentView("student_select"); }} className="btn btn-outline">
                 Sair
               </button>
             )}
           </div>
 
-          {/* Seletores de Temas */}
-          {availableThemes.length > 0 ? (
+          {/* SELETOR DE MÓDULOS (Filtro Inteligente por Ano) */}
+          <div style={{ marginBottom: '20px', backgroundColor: '#F3F4F6', padding: '12px', borderRadius: '12px' }}>
+            <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4B5563', display: 'block', marginBottom: '8px' }}>
+              Escolhe o Módulo de Aprendizagem:
+            </label>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {availableModules.map((mod) => (
+                <button
+                  key={mod.id}
+                  onClick={() => setSelectedModuleId(mod.id)}
+                  className={`btn ${activeModuleId === mod.id ? 'btn-primary' : 'btn-outline'}`}
+                  style={{
+                    backgroundColor: activeModuleId === mod.id ? '#F2704E' : '#FFFFFF',
+                    color: activeModuleId === mod.id ? '#FFFFFF' : '#374151',
+                    fontSize: '0.9rem'
+                  }}
+                >
+                  {mod.title}
+                </button>
+              ))}
+            </div>
+            <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#6B7280' }}>
+              {currentModule.description}
+            </p>
+          </div>
+
+          {/* SELETOR DE TEMAS */}
+          {availableThemes.length > 0 && (
             <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
               {availableThemes.map((theme) => (
                 <button
@@ -616,41 +632,38 @@ function App() {
                   onClick={() => setSelectedTheme(theme)}
                   className={`btn ${activeTheme === theme ? 'btn-primary' : 'btn-outline'}`}
                   style={{
-                    backgroundColor: activeTheme === theme ? '#e55835' : '#ffffff',
-                    color: activeTheme === theme ? '#ffffff' : '#374151',
-                    borderColor: '#e5e7eb'
+                    backgroundColor: activeTheme === theme ? '#3B82F6' : '#FFFFFF',
+                    color: activeTheme === theme ? '#FFFFFF' : '#374151',
+                    borderColor: '#E5E7EB'
                   }}
                 >
                   {theme}
                 </button>
               ))}
             </div>
-          ) : (
-            <p style={{ color: '#6b7280' }}>Sem palavras disponíveis para o {selectedStudent?.grade}.º ano.</p>
           )}
 
-          <hr style={{ margin: '20px 0', border: '0', borderTop: '1px solid #e5e7eb' }} />
+          <hr style={{ margin: '20px 0', border: '0', borderTop: '1px solid #E5E7EB' }} />
 
-          {/* Grelha de Palavras do Tema */}
+          {/* GRELHA DE PALAVRAS */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '16px' }}>
             {filteredWords.map((word) => {
-              const isCompleted = (progress[word.id]?.stage || 0) >= 3;
+              const isCompleted = !!studentProgress[word.id];
               return (
                 <div
                   key={word.id}
                   onClick={() => {
-                    setCurrentWord(word);
+                    setSelectedWord(word);
                     setCurrentView("exercise");
                   }}
                   style={{
                     padding: '16px',
                     borderRadius: '12px',
                     border: '2px solid',
-                    borderColor: isCompleted ? '#10b981' : '#e5e7eb',
-                    backgroundColor: isCompleted ? '#ecfdf5' : '#f9fafb',
+                    borderColor: isCompleted ? '#10B981' : '#E5E7EB',
+                    backgroundColor: isCompleted ? '#ECFDF5' : '#FAFAFA',
                     textAlign: 'center',
-                    cursor: 'pointer',
-                    transition: 'transform 0.1s'
+                    cursor: 'pointer'
                   }}
                 >
                   <div style={{ fontSize: '2rem', marginBottom: '8px' }}>{word.emoji || "🌻"}</div>
@@ -665,38 +678,46 @@ function App() {
     );
   }
 
-  // 5. ECRÃ: Exercício de uma palavra
-  if (currentView === "exercise" && currentWord) {
-    const stage = progress[currentWord.id]?.stage || 0;
+ // 5. ECRÃ: Execução do Exercício
+  if (currentView === "exercise" && selectedWord) {
+    const activeModuleId = selectedModuleId || 1;
 
     return (
       <div className="container" style={{ maxWidth: '600px', margin: '0 auto', padding: '16px' }}>
-        <div className="card" style={{ padding: '24px' }}>
-          <button
-            className="btn btn-outline"
-            onClick={() => {
-              setCurrentWord(null);
-              setCurrentView("game");
-            }}
+        <div className="card">
+          <button 
+            onClick={() => setCurrentView("game")} 
+            className="btn btn-outline" 
             style={{ marginBottom: '16px' }}
           >
-            ← Voltar ao jardim
+            ← Voltar às Palavras
           </button>
 
-          <ActivityStages
-            word={currentWord}
-            stage={stage}
-            onComplete={async (nextStage, writtenSentence) => {
-              await handleStageComplete(nextStage, writtenSentence);
+          {/* Módulo 1: Fluxo Tradicional */}
+          {activeModuleId === 1 && (
+            <ActivityStages 
+              word={selectedWord} 
+              stage={studentProgress[selectedWord.id] || 0}
+              onComplete={(stageCompleted, sentence) => {
+                saveProgress(currentStudent.id, selectedWord.id, stageCompleted, sentence);
+              }}
+            />
+          )}
 
-              if (nextStage >= 3) {
-                setTimeout(() => {
-                  setCurrentWord(null);
+          {/* Módulo 2: Novos Exercícios (Ditado, Sílabas e Letra em Falta) */}
+          {activeModuleId === 2 && (
+            <div>
+              <h3 style={{ textAlign: 'center', color: '#374151' }}>Módulo 2: Ditado & Ortografia</h3>
+              <ListenAndWriteExercise 
+                word={selectedWord} 
+                onSuccess={() => {
+                  saveProgress(currentStudent.id, selectedWord.id, 3, "Concluído via Ditado");
+                  alert("Excelente! Ganhaste mais 1 estrela! ⭐");
                   setCurrentView("game");
-                }, 1500);
-              }
-            }}
-          />
+                }} 
+              />
+            </div>
+          )}
         </div>
       </div>
     );

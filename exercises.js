@@ -29,22 +29,30 @@ const GAME_MODULES = [
 ];
 
 // 2. Utilitário de Síntese de Voz (pt-PT)
+// Utilitário de Síntese de Voz (pt-PT) reforçado
 function speakWord(text) {
-  if (!('speechSynthesis' in window)) {
-    alert("O seu navegador não suporta a leitura de áudio.");
-    return;
-  }
+  if (!('speechSynthesis' in window)) return;
   
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = 'pt-PT';
   utterance.rate = 0.85;
 
-  const voices = window.speechSynthesis.getVoices();
-  const ptVoice = voices.find(v => v.lang === 'pt-PT' || v.lang === 'pt_PT');
-  if (ptVoice) utterance.voice = ptVoice;
+  let voices = window.speechSynthesis.getVoices();
+  let ptVoice = voices.find(v => v.lang === 'pt-PT' || v.lang === 'pt_PT' || v.lang.startsWith('pt'));
+  
+  if (ptVoice) {
+    utterance.voice = ptVoice;
+  }
 
   window.speechSynthesis.speak(utterance);
+}
+
+// Força o pré-carregamento das vozes do browser
+if ('speechSynthesis' in window) {
+  window.speechSynthesis.onvoiceschanged = () => {
+    window.speechSynthesis.getVoices();
+  };
 }
 
 // 3. EXERCÍCIO 1 (Módulo 2): Ouve e Escreve (Ditado)

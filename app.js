@@ -689,8 +689,8 @@ function App() {
     );
   }
 
- // 5. ECRÃ: Execução do Exercício
-  if (currentView === "exercise" && selectedWord) {
+  // 5. ECRÃ: Execução do Exercício
+  if (currentView === "exercise" && currentWord) {
     const activeModuleId = selectedModuleId || 1;
 
     return (
@@ -707,33 +707,56 @@ function App() {
           {/* Módulo 1: Fluxo Tradicional */}
           {activeModuleId === 1 && (
             <ActivityStages 
-              word={selectedWord} 
-              stage={studentProgress[selectedWord.id] || 0}
+              word={currentWord} 
+              stage={(progress && progress[currentWord.id]) || 0}
               onComplete={(stageCompleted, sentence) => {
-                saveProgress(currentStudent.id, selectedWord.id, stageCompleted, sentence);
+                if (typeof saveProgress === 'function') {
+                  saveProgress(selectedStudent.id, currentWord.id, stageCompleted, sentence);
+                }
               }}
             />
           )}
 
-          {/* Módulo 2: Novos Exercícios (Ditado, Sílabas e Letra em Falta) */}
+          {/* Módulo 2: Ditado, Sílabas e Letra em Falta */}
           {activeModuleId === 2 && (
             <div>
               <h3 style={{ textAlign: 'center', color: '#374151' }}>Módulo 2: Ditado & Ortografia</h3>
               <ListenAndWriteExercise 
-                word={selectedWord} 
+                word={currentWord} 
                 onSuccess={() => {
-                  saveProgress(currentStudent.id, selectedWord.id, 3, "Concluído via Ditado");
+                  if (typeof saveProgress === 'function') {
+                    saveProgress(selectedStudent.id, currentWord.id, 3, "Concluído via Ditado");
+                  }
                   alert("Excelente! Ganhaste mais 1 estrela! ⭐");
                   setCurrentView("game");
                 }} 
               />
             </div>
           )}
+
+          {/* Módulo 4: Desafios Visuais */}
+          {activeModuleId === 4 && (
+            <div style={{ textAlign: 'center', padding: '20px' }}>
+              <h3>Módulo 4: Desafio Visual</h3>
+              <div style={{ fontSize: '4rem', margin: '20px 0' }}>{currentWord.emoji}</div>
+              <p style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{currentWord.word}</p>
+              <button 
+                onClick={() => {
+                  if (typeof saveProgress === 'function') {
+                    saveProgress(selectedStudent.id, currentWord.id, 3, "Concluído via Desafio Visual");
+                  }
+                  setCurrentView("game");
+                }} 
+                className="btn btn-primary"
+              >
+                Concluir Desafio ⭐
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
-  }
-}
+  }}
 const rootElement = document.getElementById("root");
 if (rootElement) {
   ReactDOM.render(<App />, rootElement);

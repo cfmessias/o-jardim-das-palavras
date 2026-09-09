@@ -183,7 +183,7 @@ function App() {
     return (
       <div className="container">
         <div className="card">
-          <h2>Quem vai jogar hoje?</h2>
+          <h2>🤓 Quem vai jogar hoje?</h2>
           <p className="subtitle">Escolhe o teu ano e depois o teu nome na lista da turma.</p>
 
           <div className="grade-selector" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', margin: '20px 0' }}>

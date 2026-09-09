@@ -14,12 +14,12 @@ function App() {
   const [words, setWords] = useState([]);
   const [progress, setProgress] = useState({});
   const [currentWord, setCurrentWord] = useState(null);
-  const [activeCategory, setActiveCategory] = useState("animais");
+  const [selectedTheme, setSelectedTheme] = useState(null);
   const [currentView, setCurrentView] = useState("student_select");
 
   // Formulários
   const [loginEmail, setLoginEmail] = useState("");
-  const [loginPass, setLoginPass] = useState("");
+  const [loginPin, setLoginPin] = useState("");
   const [newStudentName, setNewStudentName] = useState("");
   const [newStudentPin, setNewStudentPin] = useState("");
   const [newStudentGrade, setNewStudentGrade] = useState("1");
@@ -178,14 +178,14 @@ function App() {
       e.preventDefault();
       try {
         if (isRegistering) {
-          const newTeacher = await registerTeacher(loginEmail, loginPass, regName, regSchool);
+          const newTeacher = await registerTeacher(loginEmail, loginPin, regName, regSchool);
           alert("Conta de professor criada com sucesso!");
           setTeacher(newTeacher);
           saveTeacherSession(newTeacher);
           await loadTeacherStudents(newTeacher.id);
           setCurrentView("dashboard");
         } else {
-          const loggedTeacher = await loginTeacher(loginEmail, loginPass);
+          const loggedTeacher = await loginTeacher(loginEmail, loginPin);
           setTeacher(loggedTeacher);
           saveTeacherSession(loggedTeacher);
           await loadTeacherStudents(loggedTeacher.id);
@@ -234,10 +234,12 @@ function App() {
             />
             <input
               type="password"
+              inputMode="numeric"
+              maxLength={4}
               className="input"
-              placeholder="PIN / Palavra-passe"
-              value={loginPass}
-              onChange={(e) => setLoginPass(e.target.value)}
+              placeholder="PIN (4 dígitos)"
+              value={loginPin}
+              onChange={(e) => setLoginPin(e.target.value)}
               required
             />
 
@@ -352,13 +354,13 @@ function App() {
   // 4. ECRÃ: O Jogo
 // 4. ECRÃ: Visão do Aluno / Jogo
   if (currentView === "game") {
-    // Filtra palavras pelo ano do aluno e tema selecionado
-    const currentGradeWords = words.filter(w => w.grade === currentStudent?.grade);
-    const availableThemes = [...new Set(currentGradeWords.map(w => w.theme || "Geral"))];
+    // words já vem filtrado pelo ano do aluno (getWordsByGrade), só falta agrupar por tema
+    const availableThemes = [...new Set(words.map(w => w.theme || "Geral"))];
     
     // Tema ativo por omissão
     const activeTheme = selectedTheme || availableThemes[0] || "Geral";
-    const filteredWords = currentGradeWords.filter(w => (w.theme || "Geral") === activeTheme);
+    const filteredWords = words.filter(w => (w.theme || "Geral") === activeTheme);
+    const masteredCount = Object.values(progress).filter(p => (p.stage || 0) >= 3).length;
 
     return (
       <div className="container" style={{ maxWidth: '900px', margin: '0 auto', padding: '16px' }}>
@@ -367,11 +369,13 @@ function App() {
           {/* Cabeçalho Limpo e Alinhado */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '12px', flexWrap: 'wrap' }}>
             <div>
-              <h2 style={{ margin: 0 }}>Jardim de {currentStudent?.name}</h2>
+              <h2 style={{ margin: 0 }}>Jardim de {selectedStudent?.name}</h2>
               <span style={{ fontSize: '0.9rem', color: '#6b7280' }}>
-                {currentStudent?.grade}.º Ano • ⭐ {Object.keys(studentProgress).length} Palavras Concluídas
+                {selectedStudent?.grade}.º Ano • {masteredCount} Palavras Concluídas
               </span>
             </div>
+
+            <StarBadge stars={totalStars} />
 
             {/* Ação condicional: Professor volta ao Dashboard, Aluno faz Sair */}
             {teacher ? (
@@ -384,7 +388,7 @@ function App() {
             ) : (
               <button 
                 onClick={() => {
-                  setCurrentStudent(null);
+                  setSelectedStudent(null);
                   setCurrentView("student_select");
                 }} 
                 className="btn btn-outline"
@@ -413,7 +417,7 @@ function App() {
               ))}
             </div>
           ) : (
-            <p style={{ color: '#6b7280' }}>Sem palavras disponíveis para o {currentStudent?.grade}.º ano.</p>
+            <p style={{ color: '#6b7280' }}>Sem palavras disponíveis para o {selectedStudent?.grade}.º ano.</p>
           )}
 
           <hr style={{ margin: '20px 0', border: '0', borderTop: '1px solid #e5e7eb' }} />
@@ -421,12 +425,12 @@ function App() {
           {/* Grelha de Palavras do Tema */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '16px' }}>
             {filteredWords.map((word) => {
-              const isCompleted = !!studentProgress[word.id];
+              const isCompleted = (progress[word.id]?.stage || 0) >= 3;
               return (
                 <div
                   key={word.id}
                   onClick={() => {
-                    setSelectedWord(word);
+                    setCurrentWord(word);
                     setCurrentView("exercise");
                   }}
                   style={{
@@ -447,6 +451,43 @@ function App() {
             })}
           </div>
 
+        </div>
+      </div>
+    );
+  }
+
+  // 5. ECRÃ: Exercício de uma palavra
+  if (currentView === "exercise" && currentWord) {
+    const stage = progress[currentWord.id]?.stage || 0;
+
+    return (
+      <div className="container" style={{ maxWidth: '600px', margin: '0 auto', padding: '16px' }}>
+        <div className="card" style={{ padding: '24px' }}>
+          <button
+            className="btn btn-outline"
+            onClick={() => {
+              setCurrentWord(null);
+              setCurrentView("game");
+            }}
+            style={{ marginBottom: '16px' }}
+          >
+            ← Voltar ao jardim
+          </button>
+
+          <ActivityStages
+            word={currentWord}
+            stage={stage}
+            onComplete={async (nextStage, writtenSentence) => {
+              await handleStageComplete(nextStage, writtenSentence);
+
+              if (nextStage >= 3) {
+                setTimeout(() => {
+                  setCurrentWord(null);
+                  setCurrentView("game");
+                }, 1500);
+              }
+            }}
+          />
         </div>
       </div>
     );

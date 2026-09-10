@@ -717,30 +717,35 @@ function App() {
             />
           )}
 
-          {/* Módulo 2: Ditado & Ortografia */}
+         {/* Módulo 2: Completa a Frase */}
           {activeModuleId === 2 && (
             <div>
               <h3 style={{ textAlign: 'center', color: '#374151', marginBottom: '20px' }}>
-                Módulo 2: Ouvir e Decompor
+                Módulo 2: Completa a Frase
               </h3>
 
-              <ListenAndWriteExercise 
+              <MissingWordExercise 
                 word={currentWord} 
                 onSuccess={() => {
-                  const logText = `Concluído Módulo 2: ${currentWord.word}`;
-                  
-                  // Guarda o progresso no Supabase / DB local
+                  // Monta a frase completa com base nos campos do data.js
+                  const beforeText = currentWord.wordBlankBefore || "";
+                  const afterText = currentWord.wordBlankAfter || "";
+                  const fullSentence = `${beforeText} ${currentWord.word} ${afterText}`.trim();
+
+                  // Guarda o progresso e a frase no Supabase
                   if (typeof saveProgress === 'function') {
-                    saveProgress(selectedStudent.id, currentWord.id, 3, logText);
+                    saveProgress(selectedStudent.id, currentWord.id, 3, fullSentence);
                   }
 
-                  // Atualiza o estado local imediatamente para refletir a estrela
-                  setProgress(prev => ({
-                    ...prev,
-                    [currentWord.id]: 3
-                  }));
+                  // Atualiza o estado local para dar a estrela
+                  if (typeof setProgress === 'function') {
+                    setProgress(prev => ({
+                      ...prev,
+                      [currentWord.id]: 3
+                    }));
+                  }
 
-                  alert("Excelente! Ditado superado com sucesso! ⭐");
+                  alert("Muito bem! Frase completada com sucesso! ⭐");
                   setCurrentView("game");
                 }} 
               />

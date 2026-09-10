@@ -169,7 +169,6 @@ function MissingWordExercise({ word, onSuccess }) {
     const cleanSentence = `${beforeText} ${wordToRead} ${afterText}`.replace(/\s+/g, ' ').trim();
     speakWord(cleanSentence);
   };
-
   return (
     <div style={{ textAlign: "center", padding: "20px" }}>
       <h4>Completa a frase com a palavra correta:</h4>
@@ -208,7 +207,6 @@ function MissingWordExercise({ word, onSuccess }) {
           Verificar
         </button>
       </div>
-
       {error && (
         <p style={{ color: "#EF4444", marginTop: "10px", fontWeight: "bold" }}>
           Tenta outra vez!

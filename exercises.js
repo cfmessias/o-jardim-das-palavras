@@ -134,14 +134,26 @@ function ListenAndWriteExercise({ word, onSuccess }) {
   );
 }
 
-//Exercicio 
 function MissingWordExercise({ word, onSuccess }) {
   const [inputVal, setInputVal] = React.useState("");
   const [error, setError] = React.useState(false);
 
-  // Monta a frase com o espaço
-  const beforeText = word.wordBlankBefore || "O/A ";
-  const afterText = word.wordBlankAfter || " é muito bonito(a).";
+  // Mapeia todas as possíveis chaves da DB (camelCase e snake_case)
+  const beforeText = 
+    word.wordBlankBefore ?? 
+    word.word_blank_before ?? 
+    word.sentence_before ?? 
+    word.sentenceBefore ?? 
+    word.inicio_frase ??
+    "";
+
+  const afterText = 
+    word.wordBlankAfter ?? 
+    word.word_blank_after ?? 
+    word.sentence_after ?? 
+    word.sentenceAfter ?? 
+    word.fim_frase ??
+    "";
 
   const handleCheck = () => {
     if (inputVal.trim().toLowerCase() === word.word.toLowerCase()) {
@@ -150,6 +162,12 @@ function MissingWordExercise({ word, onSuccess }) {
     } else {
       setError(true);
     }
+  };
+
+  const handlePlayAudio = () => {
+    const wordToRead = inputVal.trim() !== "" ? inputVal : word.word;
+    const cleanSentence = `${beforeText} ${wordToRead} ${afterText}`.replace(/\s+/g, ' ').trim();
+    speakWord(cleanSentence);
   };
 
   return (
@@ -168,7 +186,7 @@ function MissingWordExercise({ word, onSuccess }) {
           style={{
             padding: "6px 12px",
             fontSize: "1.2rem",
-            width: "120px",
+            width: "140px",
             textAlign: "center",
             border: error ? "2px solid #EF4444" : "2px solid #3B82F6",
             borderRadius: "8px",
@@ -180,7 +198,7 @@ function MissingWordExercise({ word, onSuccess }) {
 
       <div style={{ display: "flex", gap: "10px", justifyContent: "center", marginTop: "15px" }}>
         <button 
-          onClick={() => speakWord(`${beforeText} ${word.word} ${afterText}`)} 
+          onClick={handlePlayAudio} 
           className="btn btn-outline"
         >
           🔊 Ouvir Frase
@@ -199,7 +217,6 @@ function MissingWordExercise({ word, onSuccess }) {
     </div>
   );
 }
-
 // 4. EXERCÍCIO 2 (Módulo 2): Divisão Silábica (Bater Palmas / Seleção)
 function SyllablesExercise({ word, onSuccess }) {
   // Exemplo básico de divisão silábica por hífen ou fallback por tamanho

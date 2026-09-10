@@ -29,25 +29,41 @@ const GAME_MODULES = [
 ];
 
 // 2. Utilitário de Síntese de Voz (pt-PT)
-// Utilitário de Síntese de Voz (pt-PT) reforçado
 function speakWord(text) {
   if (!('speechSynthesis' in window)) return;
   
+  // Cancela áudios pendentes para não sobrepor
   window.speechSynthesis.cancel();
+  
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = 'pt-PT';
-  utterance.rate = 0.85;
+  utterance.rate = 0.8; // Velocidade ligeiramente mais pausada para crianças
+  utterance.pitch = 1.0; // Afinação natural
 
-  let voices = window.speechSynthesis.getVoices();
-  let ptVoice = voices.find(v => v.lang === 'pt-PT' || v.lang === 'pt_PT' || v.lang.startsWith('pt'));
-  
-  if (ptVoice) {
-    utterance.voice = ptVoice;
+  const voices = window.speechSynthesis.getVoices();
+
+  // 1. Procura prioritariamente por vozes explícitas pt-PT ou de Portugal
+  const ptPtVoice = voices.find(v => 
+    v.lang === 'pt-PT' || 
+    v.lang === 'pt_PT' || 
+    v.name.includes('Portugal') || 
+    v.name.includes('Portuguese (Portugal)') ||
+    (v.lang.startsWith('pt') && !v.lang.includes('BR') && !v.name.includes('Brazil'))
+  );
+
+  if (ptPtVoice) {
+    utterance.voice = ptPtVoice;
   }
 
   window.speechSynthesis.speak(utterance);
 }
 
+// Carregamento assíncrono obrigatorio para browsers baseados em Chromium (Chrome/Edge/Brave)
+if ('speechSynthesis' in window) {
+  window.speechSynthesis.onvoiceschanged = () => {
+    window.speechSynthesis.getVoices();
+  };
+}
 // Força o pré-carregamento das vozes do browser
 if ('speechSynthesis' in window) {
   window.speechSynthesis.onvoiceschanged = () => {

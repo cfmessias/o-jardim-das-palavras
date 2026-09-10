@@ -134,6 +134,72 @@ function ListenAndWriteExercise({ word, onSuccess }) {
   );
 }
 
+//Exercicio 
+function MissingWordExercise({ word, onSuccess }) {
+  const [inputVal, setInputVal] = React.useState("");
+  const [error, setError] = React.useState(false);
+
+  // Monta a frase com o espaço
+  const beforeText = word.wordBlankBefore || "O/A ";
+  const afterText = word.wordBlankAfter || " é muito bonito(a).";
+
+  const handleCheck = () => {
+    if (inputVal.trim().toLowerCase() === word.word.toLowerCase()) {
+      setError(false);
+      onSuccess();
+    } else {
+      setError(true);
+    }
+  };
+
+  return (
+    <div style={{ textAlign: "center", padding: "20px" }}>
+      <h4>Completa a frase com a palavra correta:</h4>
+      
+      <div style={{ fontSize: "2.5rem", margin: "15px 0" }}>{word.emoji}</div>
+
+      <div style={{ fontSize: "1.3rem", margin: "20px 0", lineHeight: "1.8" }}>
+        <span>{beforeText}</span>
+        <input
+          type="text"
+          value={inputVal}
+          onChange={(e) => setInputVal(e.target.value)}
+          placeholder="???"
+          style={{
+            padding: "6px 12px",
+            fontSize: "1.2rem",
+            width: "120px",
+            textAlign: "center",
+            border: error ? "2px solid #EF4444" : "2px solid #3B82F6",
+            borderRadius: "8px",
+            margin: "0 8px"
+          }}
+        />
+        <span>{afterText}</span>
+      </div>
+
+      <div style={{ display: "flex", gap: "10px", justifyContent: "center", marginTop: "15px" }}>
+        <button 
+          onClick={() => speakWord(`${beforeText} ${word.word} ${afterText}`)} 
+          className="btn btn-outline"
+        >
+          🔊 Ouvir Frase
+        </button>
+        
+        <button onClick={handleCheck} className="btn btn-primary">
+          Verificar
+        </button>
+      </div>
+
+      {error && (
+        <p style={{ color: "#EF4444", marginTop: "10px", fontWeight: "bold" }}>
+          Tenta outra vez!
+        </p>
+      )}
+    </div>
+  );
+}
+
 // 4. EXERCÍCIO 2 (Módulo 2): Divisão Silábica (Bater Palmas / Seleção)
 function SyllablesExercise({ word, onSuccess }) {
   // Exemplo básico de divisão silábica por hífen ou fallback por tamanho

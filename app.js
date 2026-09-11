@@ -562,20 +562,50 @@ function App() {
   }
 
   // 4. ECRÃ: Visão do Aluno / Jogo
-  if (currentView === "game") {
+if (currentView === "game") {
     // 1. Obtém o ano do aluno (usa selectedStudent com fallback de segurança para 1)
     const studentGrade = selectedStudent?.grade || 1;
 
-    // 2. Filtra os módulos disponíveis com base no ano escolar do aluno
-    const availableModules = GAME_MODULES.filter(m => studentGrade >= m.minGrade);
+    // 2. Módulos fixos de 1 a 3 para a dinâmica dos 1.º e 2.º anos
+    const availableModules = [
+      { id: 1, title: "Módulo 1" },
+      { id: 2, title: "Módulo 2" },
+      { id: 3, title: "Módulo 3" }
+    ];
     const activeModuleId = selectedModuleId || 1;
-    const currentModule = GAME_MODULES.find(m => m.id === activeModuleId) || GAME_MODULES[0];
 
     // 3. Filtra palavras pelo ano e pelo tema selecionado
-    const currentGradeWords = words.filter(w => w.grade === studentGrade);
+    const currentGradeWords = words.filter(w => (w.grade || 1) === studentGrade);
     const availableThemes = [...new Set(currentGradeWords.map(w => w.theme || "Geral"))];
     const activeTheme = selectedTheme || availableThemes[0] || "Geral";
     const filteredWords = currentGradeWords.filter(w => (w.theme || "Geral") === activeTheme);
+
+    // 4. Função de Roteamento Dinâmico para os Componentes do exercises.js
+    const renderActiveExercise = () => {
+      if (filteredWords.length === 0) {
+        return (
+          <div style={{ textAlign: 'center', padding: '24px', color: '#6B7280' }}>
+            Não existem palavras configuradas para este tema ou ano.
+          </div>
+        );
+      }
+
+      // Lógica do 1.º Ano
+      if (studentGrade === 1) {
+        if (activeModuleId === 1) return <Grade1Module1 words={filteredWords} />;
+        if (activeModuleId === 2) return <MissingLetterList words={filteredWords} onComplete={() => handleModuleComplete(1)} />;
+        if (activeModuleId === 3) return <Grade1Module3 words={filteredWords} onComplete={() => handleModuleComplete(2)} />;
+      }
+
+      // Lógica do 2.º Ano
+      if (studentGrade === 2) {
+        if (activeModuleId === 1) return <MissingLetterList words={filteredWords} onComplete={() => handleModuleComplete(1)} />;
+        if (activeModuleId === 2) return <Grade2Module2 words={filteredWords} onComplete={() => handleModuleComplete(2)} />;
+        if (activeModuleId === 3) return <Grade2Module3 words={filteredWords} onComplete={() => handleModuleComplete(3)} />;
+      }
+
+      return <Grade1Module1 words={filteredWords} />;
+    };
 
     return (
       <div className="container" style={{ maxWidth: '900px', margin: '0 auto', padding: '16px' }}>
@@ -629,9 +659,6 @@ function App() {
                 </button>
               ))}
             </div>
-            <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#6B7280' }}>
-              {currentModule.description}
-            </p>
           </div>
 
           {/* SELETOR DE TEMAS */}
@@ -656,32 +683,9 @@ function App() {
 
           <hr style={{ margin: '20px 0', border: '0', borderTop: '1px solid #E5E7EB' }} />
 
-          {/* GRELHA DE PALAVRAS */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '16px' }}>
-            {filteredWords.map((word) => {
-              const isCompleted = !!(progress && progress[word.id]);
-              return (
-                <div
-                  key={word.id}
-                  onClick={() => {
-                    setCurrentWord(word);
-                    setCurrentView("exercise");
-                  }}
-                  style={{
-                    padding: '16px',
-                    borderRadius: '12px',
-                    border: '2px solid',
-                    borderColor: isCompleted ? '#10B981' : '#E5E7EB',
-                    backgroundColor: isCompleted ? '#ECFDF5' : '#FAFAFA',
-                    textAlign: 'center',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <div style={{ fontSize: '2rem', marginBottom: '8px' }}>{word.emoji || "🌻"}</div>
-                  <div style={{ fontWeight: 'bold', color: '#111827' }}>{word.word}</div>
-                </div>
-              );
-            })}
+          {/* ÁREA PRINCIPAL DO EXERCÍCIO (Substitui a antiga grelha) */}
+          <div style={{ marginTop: '16px' }}>
+            {renderActiveExercise()}
           </div>
 
         </div>

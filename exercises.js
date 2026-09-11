@@ -1,6 +1,7 @@
 // exercises.js - Módulos Pedagógicos com o Mocho Pico (PLNN 1.º e 2.º Ano)
 
 // Utilitário de Síntese de Voz (Garantia de pt-PT sem erros de Media)
+// Utilitário de Síntese de Voz (Garantia de pt-PT sem erros de Media)
 function speakWord(text) {
   if (!text) return;
 

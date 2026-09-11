@@ -595,3 +595,375 @@ function Grade2Module3({ words, onComplete }) {
     </div>
   );
 }
+
+// =============================================================
+// COMPONENTES 3.º E 4.º ANO (PLNN)
+// =============================================================
+
+// 3.º Ano - Módulo 1: Concordância e Flexão (Gênero, Número e Tempo)
+function Grade3Module1({ exercises, onComplete }) {
+  const [currentIndex, setCurrentIndex] = React.useState(0);
+  const [selectedOption, setSelectedOption] = React.useState(null);
+  const [result, setResult] = React.useState(null);
+  const [picoState, setPicoState] = React.useState({
+    message: exercises[0]?.prompt || "Escolhe a palavra correta para completar a frase!",
+    isSuccess: false
+  });
+
+  const currentEx = exercises[currentIndex];
+  if (!currentEx) return null;
+
+  const content = typeof currentEx.content === 'string' 
+    ? JSON.parse(currentEx.content) 
+    : currentEx.content;
+
+  const handleSelectOption = (opt) => {
+    setSelectedOption(opt);
+    setResult(null);
+  };
+
+  const handleCheck = () => {
+    if (!selectedOption) return;
+
+    const isCorrect = selectedOption === content.correct_option;
+    setResult(isCorrect);
+
+    if (isCorrect) {
+      const successMsg = "Excelente! A concordância está perfeita!";
+      setPicoState({ message: successMsg, isSuccess: true });
+      speakWord(successMsg);
+
+      setTimeout(() => {
+        if (currentIndex + 1 < exercises.length) {
+          setCurrentIndex(prev => prev + 1);
+          setSelectedOption(null);
+          setResult(null);
+          setPicoState({ 
+            message: exercises[currentIndex + 1]?.prompt || "Escolhe a palavra correta!", 
+            isSuccess: false 
+          });
+        } else {
+          if (onComplete) onComplete();
+        }
+      }, 1800);
+    } else {
+      const retryMsg = "Quase lá! Tenta outra opção para fazer sentido.";
+      setPicoState({ message: retryMsg, isSuccess: false });
+      speakWord(retryMsg);
+    }
+  };
+
+  const sentenceParts = content.sentence_template.split('___');
+
+  return (
+    <div style={{ padding: '16px', maxWidth: '550px', margin: '0 auto', textAlign: 'center' }}>
+      <PicoHeader message={picoState.message} isSuccess={picoState.isSuccess} />
+
+      <div style={{
+        backgroundColor: '#FAFAFA',
+        border: '2px solid #E5E7EB',
+        borderRadius: '16px',
+        padding: '24px',
+        marginBottom: '24px'
+      }}>
+        <div style={{ fontSize: '1.3rem', fontWeight: '500', color: '#1F2937', marginBottom: '20px' }}>
+          <span>{sentenceParts[0]}</span>
+          <span style={{
+            display: 'inline-block',
+            minWidth: '100px',
+            borderBottom: '3px solid #3B82F6',
+            color: '#2563EB',
+            fontWeight: 'bold',
+            padding: '0 8px'
+          }}>
+            {selectedOption || "____?"}
+          </span>
+          <span>{sentenceParts[1]}</span>
+        </div>
+
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          {content.options.map((opt, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => handleSelectOption(opt)}
+              className="btn btn-outline"
+              style={{
+                fontSize: '1.1rem',
+                padding: '10px 18px',
+                borderRadius: '10px',
+                backgroundColor: selectedOption === opt ? '#DBEAFE' : '#FFFFFF',
+                borderColor: selectedOption === opt ? '#2563EB' : '#D1D5DB',
+                fontWeight: selectedOption === opt ? 'bold' : 'normal'
+              }}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+        <button
+          type="button"
+          onClick={() => speakWord(content.full_sentence)}
+          className="btn btn-outline"
+          style={{ fontSize: '1rem', padding: '10px 16px' }}
+        >
+          🔊 Ouvir Frase
+        </button>
+
+        <button
+          type="button"
+          onClick={handleCheck}
+          disabled={!selectedOption}
+          className="btn btn-primary"
+          style={{ fontSize: '1rem', padding: '10px 24px', opacity: selectedOption ? 1 : 0.6 }}
+        >
+          Verificar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// 3.º Ano - Módulo 2: Reconstituição e Ordem Frásica (Puzzle de Sintaxe)
+function Grade3Module2({ exercises, onComplete }) {
+  const [currentIndex, setCurrentIndex] = React.useState(0);
+  const currentEx = exercises[currentIndex];
+  
+  if (!currentEx) return null;
+
+  const content = typeof currentEx.content === 'string' 
+    ? JSON.parse(currentEx.content) 
+    : currentEx.content;
+
+  const [availableWords, setAvailableWords] = React.useState(content.scrambled);
+  const [builtSentence, setBuiltSentence] = React.useState([]);
+  const [picoState, setPicoState] = React.useState({
+    message: currentEx.prompt || "Clica nas palavras pela ordem correta!",
+    isSuccess: false
+  });
+
+  const handleAddWord = (word, index) => {
+    setBuiltSentence(prev => [...prev, word]);
+    setAvailableWords(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleRemoveWord = (word, index) => {
+    setAvailableWords(prev => [...prev, word]);
+    setBuiltSentence(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleVerify = () => {
+    const isCorrect = JSON.stringify(builtSentence) === JSON.stringify(content.correct_order);
+
+    if (isCorrect) {
+      const successMsg = "Fantástico! A frase está perfeitamente ordenada!";
+      setPicoState({ message: successMsg, isSuccess: true });
+      speakWord(content.full_sentence);
+
+      setTimeout(() => {
+        if (currentIndex + 1 < exercises.length) {
+          const nextEx = exercises[currentIndex + 1];
+          const nextContent = typeof nextEx.content === 'string' ? JSON.parse(nextEx.content) : nextEx.content;
+          setCurrentIndex(prev => prev + 1);
+          setAvailableWords(nextContent.scrambled);
+          setBuiltSentence([]);
+          setPicoState({ message: nextEx.prompt || "Organiza a próxima frase!", isSuccess: false });
+        } else {
+          if (onComplete) onComplete();
+        }
+      }, 2000);
+    } else {
+      const retryMsg = "A ordem ainda não está certa. Clica nas palavras para ajustar!";
+      setPicoState({ message: retryMsg, isSuccess: false });
+      speakWord(retryMsg);
+    }
+  };
+
+  return (
+    <div style={{ padding: '16px', maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
+      <PicoHeader message={picoState.message} isSuccess={picoState.isSuccess} />
+
+      {/* Área da Frase a ser Construída */}
+      <div style={{
+        minHeight: '70px',
+        backgroundColor: '#F3F4F6',
+        border: '2px dashed #9CA3AF',
+        borderRadius: '16px',
+        padding: '16px',
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '8px',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: '24px'
+      }}>
+        {builtSentence.length === 0 && (
+          <span style={{ color: '#9CA3AF', fontStyle: 'italic' }}>
+            Clica nas palavras abaixo para construir a frase...
+          </span>
+        )}
+        {builtSentence.map((word, idx) => (
+          <button
+            key={idx}
+            onClick={() => handleRemoveWord(word, idx)}
+            className="btn btn-primary"
+            style={{ fontSize: '1.1rem', padding: '8px 14px', borderRadius: '8px' }}
+          >
+            {word} ✕
+          </button>
+        ))}
+      </div>
+
+      {/* Palavras Disponíveis */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center', marginBottom: '24px' }}>
+        {availableWords.map((word, idx) => (
+          <button
+            key={idx}
+            onClick={() => handleAddWord(word, idx)}
+            className="btn btn-outline"
+            style={{ fontSize: '1.1rem', padding: '10px 16px', borderRadius: '8px', backgroundColor: '#FFFFFF' }}
+          >
+            {word}
+          </button>
+        ))}
+      </div>
+
+      <button
+        onClick={handleVerify}
+        disabled={availableWords.length > 0}
+        className="btn btn-primary"
+        style={{ width: '100%', padding: '12px', fontSize: '1.1rem', opacity: availableWords.length === 0 ? 1 : 0.6 }}
+      >
+        Verificar Frase
+      </button>
+    </div>
+  );
+}
+
+// 4.º Ano - Módulo 3: Leitura e Interpretação de Microtextos
+function Grade4Module3({ exercises, onComplete }) {
+  const [currentIndex, setCurrentIndex] = React.useState(0);
+  const currentEx = exercises[currentIndex];
+
+  if (!currentEx) return null;
+
+  const content = typeof currentEx.content === 'string' 
+    ? JSON.parse(currentEx.content) 
+    : currentEx.content;
+
+  const [answers, setAnswers] = React.useState({});
+  const [picoState, setPicoState] = React.useState({
+    message: currentEx.prompt || "Lê o texto com atenção e responde às perguntas!",
+    isSuccess: false
+  });
+
+  const handleSelectAnswer = (qId, option) => {
+    setAnswers(prev => ({ ...prev, [qId]: option }));
+  };
+
+  const handleVerify = () => {
+    let allCorrect = true;
+
+    content.questions.forEach(q => {
+      if (answers[q.id] !== q.answer) {
+        allCorrect = false;
+      }
+    });
+
+    if (allCorrect) {
+      const successMsg = "Excelente interpretação! Acertaste em todas as respostas!";
+      setPicoState({ message: successMsg, isSuccess: true });
+      speakWord(successMsg);
+
+      setTimeout(() => {
+        if (currentIndex + 1 < exercises.length) {
+          setCurrentIndex(prev => prev + 1);
+          setAnswers({});
+          setPicoState({ message: "Lê o novo texto com atenção!", isSuccess: false });
+        } else {
+          if (onComplete) onComplete();
+        }
+      }, 2000);
+    } else {
+      const retryMsg = "Há respostas por corrigir. Lê o texto novamente com atenção!";
+      setPicoState({ message: retryMsg, isSuccess: false });
+      speakWord(retryMsg);
+    }
+  };
+
+  return (
+    <div style={{ padding: '16px', maxWidth: '650px', margin: '0 auto' }}>
+      <PicoHeader message={picoState.message} isSuccess={picoState.isSuccess} />
+
+      {/* Cartão de Leitura do Texto */}
+      <div style={{
+        backgroundColor: '#FFFBEB',
+        border: '2px solid #F59E0B',
+        borderRadius: '16px',
+        padding: '20px',
+        marginBottom: '24px',
+        boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          <h3 style={{ margin: 0, color: '#D97706', fontSize: '1.2rem' }}>📖 {currentEx.title}</h3>
+          <button
+            onClick={() => speakWord(content.text)}
+            className="btn btn-outline"
+            style={{ padding: '4px 10px', fontSize: '0.9rem' }}
+          >
+            🔊 Ouvir Texto
+          </button>
+        </div>
+        <p style={{ fontSize: '1.15rem', lineHeight: '1.6', color: '#1F2937', margin: 0 }}>
+          {content.text}
+        </p>
+      </div>
+
+      {/* Lista de Perguntas */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '24px' }}>
+        {content.questions.map((q, qIdx) => (
+          <div key={q.id} style={{ backgroundColor: '#FAFAFA', padding: '16px', borderRadius: '12px', border: '1px solid #E5E7EB' }}>
+            <div style={{ fontWeight: 'bold', fontSize: '1.05rem', color: '#111827', marginBottom: '12px' }}>
+              {qIdx + 1}. {q.question}
+            </div>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              {q.options.map((opt, optIdx) => (
+                <button
+                  key={optIdx}
+                  onClick={() => handleSelectAnswer(q.id, opt)}
+                  className="btn btn-outline"
+                  style={{
+                    padding: '8px 14px',
+                    fontSize: '1rem',
+                    backgroundColor: answers[q.id] === opt ? '#DBEAFE' : '#FFFFFF',
+                    borderColor: answers[q.id] === opt ? '#2563EB' : '#D1D5DB',
+                    fontWeight: answers[q.id] === opt ? 'bold' : 'normal'
+                  }}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <button
+        onClick={handleVerify}
+        disabled={Object.keys(answers).length < content.questions.length}
+        className="btn btn-primary"
+        style={{
+          width: '100%',
+          padding: '12px',
+          fontSize: '1.1rem',
+          opacity: Object.keys(answers).length === content.questions.length ? 1 : 0.6
+        }}
+      >
+        Verificar Respostas
+      </button>
+    </div>
+  );
+}

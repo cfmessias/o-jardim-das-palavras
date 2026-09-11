@@ -1,16 +1,13 @@
-// exercises.js - Módulos Pedagógicos para PLNN (1.º e 2.º Ano)
+// exercises.js - Módulos Pedagógicos com o Mocho Pico (PLNN 1.º e 2.º Ano)
 
 // 1. Utilitário de Síntese de Voz (pt-PT estrito)
-// Utilitário de Síntese de Voz (Garantia de pt-PT estrito)
 function speakWord(text) {
   if (!text) return;
 
-  // 1. Procura vozes pt-PT locais no navegador
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel();
     const voices = window.speechSynthesis.getVoices();
 
-    // Filtro rigoroso: Tem de ser pt-PT / pt_PT e NÃO ter BR ou Brasil
     const strictPtPtVoice = voices.find(v => 
       (v.lang === 'pt-PT' || v.lang === 'pt_PT') && 
       !v.lang.toUpperCase().includes('BR') && 
@@ -18,7 +15,6 @@ function speakWord(text) {
       !v.name.toUpperCase().includes('BRASIL')
     );
 
-    // Se encontrou uma voz pt-PT real no sistema, usa-a
     if (strictPtPtVoice) {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.voice = strictPtPtVoice;
@@ -29,21 +25,80 @@ function speakWord(text) {
     }
   }
 
-  // 2. FALLBACK GARANTIDO: Se o sistema não tiver voz pt-PT instalada, usa o serviço de áudio pt-PT
+  // Fallback direto via serviço de áudio remoto pt-PT
   const encodedText = encodeURIComponent(text);
   const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=pt-PT&client=tw-ob`;
   
   const audio = new Audio(audioUrl);
   audio.play().catch(err => {
-    console.warn("Não foi possível reproduzir o áudio:", err);
+    console.warn("Erro no áudio:", err);
   });
+}
+
+if ('speechSynthesis' in window) {
+  window.speechSynthesis.onvoiceschanged = () => {
+    window.speechSynthesis.getVoices();
+  };
+  window.speechSynthesis.getVoices();
+}
+
+// -------------------------------------------------------------
+// COMPONENTE DO MASCOTE MOCHO PICO 🦉
+// -------------------------------------------------------------
+function PicoHeader({ message, isSuccess = false }) {
+  if (!message) return null;
+
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '16px',
+      backgroundColor: isSuccess ? '#ECFDF5' : '#FFFBEB',
+      border: isSuccess ? '2px solid #10B981' : '2px solid #F59E0B',
+      borderRadius: '16px',
+      padding: '14px 18px',
+      marginBottom: '20px',
+      maxWidth: '550px',
+      margin: '0 auto 24px auto',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+    }}>
+      <div 
+        onClick={() => speakWord(message)}
+        title="Ouve o Mocho Pico!"
+        style={{ 
+          fontSize: '3rem', 
+          cursor: 'pointer',
+          lineHeight: '1',
+          transition: 'transform 0.2s'
+        }}
+      >
+        🦉
+      </div>
+      <div style={{ flexGrow: 1, textAlign: 'left' }}>
+        <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: isSuccess ? '#059669' : '#D97706', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          Mocho Pico diz:
+        </div>
+        <div style={{ fontSize: '1.05rem', fontWeight: '600', color: '#1F2937', marginTop: '2px' }}>
+          "{message}"
+        </div>
+      </div>
+      <button 
+        type="button" 
+        onClick={() => speakWord(message)}
+        className="btn btn-outline"
+        style={{ padding: '8px 12px', borderRadius: '50%', fontSize: '1.1rem' }}
+      >
+        🔊
+      </button>
+    </div>
+  );
 }
 
 // -------------------------------------------------------------
 // COMPONENTES 1.º ANO
 // -------------------------------------------------------------
 
-// 1.º Ano - Módulo 1: Descobrir Palavras (Exploração Imagem, Texto e Som)
+// 1.º Ano - Módulo 1: Descobrir Palavras
 function Grade1Module1({ words }) {
   const [selectedWord, setSelectedWord] = React.useState(null);
   const [showText, setShowText] = React.useState(false);
@@ -55,9 +110,7 @@ function Grade1Module1({ words }) {
 
   return (
     <div style={{ textAlign: 'center', padding: '16px' }}>
-      <p style={{ color: '#4B5563', marginBottom: '16px', fontWeight: 'bold' }}>
-        Escolhe um emoji para descobrires a palavra:
-      </p>
+      <PicoHeader message="Escolhe um emoji para descobrires como se escreve e como se diz!" />
 
       {/* Grelha de Emojis */}
       <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '24px' }}>
@@ -85,7 +138,6 @@ function Grade1Module1({ words }) {
         <div style={{ border: '2px dashed #F2704E', padding: '24px', borderRadius: '16px', backgroundColor: '#FAFAFA', maxWidth: '400px', margin: '0 auto' }}>
           <div style={{ fontSize: '4rem', marginBottom: '12px' }}>{selectedWord.emoji}</div>
 
-          {/* Área da Palavra */}
           <div style={{ minHeight: '48px', marginBottom: '20px', fontSize: '2rem', fontWeight: 'bold', color: '#111827' }}>
             {showText ? selectedWord.word : "___ ??? ___"}
           </div>
@@ -112,9 +164,8 @@ function Grade1Module1({ words }) {
   );
 }
 
-// 1.º e 2.º Ano - Módulo de Letra em Falta (1º Ano: Mod 2 / 2º Ano: Mod 1)
+// 1.º e 2.º Ano - Módulo de Letra em Falta
 function MissingLetterList({ words, onComplete }) {
-  // Prepara cada palavra sorteando uma letra para ocultar
   const [preparedWords] = React.useState(() => {
     return words.map(w => {
       const cleanWord = w.word.trim();
@@ -127,6 +178,10 @@ function MissingLetterList({ words, onComplete }) {
 
   const [userInputs, setUserInputs] = React.useState({});
   const [results, setResults] = React.useState({});
+  const [picoState, setPicoState] = React.useState({
+    message: "Completa a letra que falta em cada palavra!",
+    isSuccess: false
+  });
 
   const handleInputChange = (id, val) => {
     setUserInputs(prev => ({ ...prev, [id]: val }));
@@ -146,16 +201,20 @@ function MissingLetterList({ words, onComplete }) {
     setResults(newResults);
 
     if (correctCount === preparedWords.length) {
-      speakWord("Excelente! Completaste todas as letras!");
+      const successMsg = "Excelente! Completaste todas as letras certas!";
+      setPicoState({ message: successMsg, isSuccess: true });
+      speakWord(successMsg);
       if (onComplete) onComplete();
+    } else {
+      const retryMsg = "Quase lá! Revisa as letras que estão a vermelho.";
+      setPicoState({ message: retryMsg, isSuccess: false });
+      speakWord(retryMsg);
     }
   };
 
   return (
     <div style={{ padding: '16px', maxWidth: '500px', margin: '0 auto' }}>
-      <p style={{ textAlign: 'center', color: '#4B5563', marginBottom: '20px', fontWeight: 'bold' }}>
-        Completa a letra que falta em cada palavra:
-      </p>
+      <PicoHeader message={picoState.message} isSuccess={picoState.isSuccess} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {preparedWords.map(w => {
@@ -229,6 +288,10 @@ function Grade1Module3({ words, onComplete }) {
   const sentenceWords = React.useMemo(() => words.slice(0, 5), [words]);
   const [selectedAnswers, setSelectedAnswers] = React.useState({});
   const [results, setResults] = React.useState({});
+  const [picoState, setPicoState] = React.useState({
+    message: "Escolhe a palavra correta para preencher cada frase!",
+    isSuccess: false
+  });
 
   const handleSelect = (wordId, option) => {
     setSelectedAnswers(prev => ({ ...prev, [wordId]: option }));
@@ -247,16 +310,20 @@ function Grade1Module3({ words, onComplete }) {
     setResults(newResults);
 
     if (correct === sentenceWords.length) {
-      speakWord("Muito bem! Preencheste todas as frases corretamente!");
+      const successMsg = "Muito bem! Preencheste todas as frases corretamente!";
+      setPicoState({ message: successMsg, isSuccess: true });
+      speakWord(successMsg);
       if (onComplete) onComplete();
+    } else {
+      const retryMsg = "Tenta outra vez nas frases que precisam de correção!";
+      setPicoState({ message: retryMsg, isSuccess: false });
+      speakWord(retryMsg);
     }
   };
 
   return (
     <div style={{ padding: '16px', maxWidth: '600px', margin: '0 auto' }}>
-      <p style={{ textAlign: 'center', color: '#4B5563', marginBottom: '20px', fontWeight: 'bold' }}>
-        Escolha a palavra correta para cada frase:
-      </p>
+      <PicoHeader message={picoState.message} isSuccess={picoState.isSuccess} />
 
       {sentenceWords.map(w => {
         const beforeText = w.wordBlankBefore || w.blank_before || "O/A ";
@@ -272,7 +339,7 @@ function Grade1Module3({ words, onComplete }) {
               padding: '16px', 
               borderRadius: '12px', 
               backgroundColor: isCorrect ? '#ECFDF5' : (isWrong ? '#FEF2F2' : '#FAFAFA'),
-              border: '1px solid #E5E7EB' 
+              border: isCorrect ? '2px solid #10B981' : (isWrong ? '2px solid #EF4444' : '1px solid #E5E7EB')
             }}
           >
             <div style={{ fontSize: '1.2rem', marginBottom: '12px' }}>
@@ -283,7 +350,6 @@ function Grade1Module3({ words, onComplete }) {
               <span>{afterText}</span>
             </div>
 
-            {/* Banco de Opções para esta frase */}
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               {words.slice(0, 5).map(opt => (
                 <button
@@ -325,6 +391,10 @@ function Grade1Module3({ words, onComplete }) {
 function Grade2Module2({ words, onComplete }) {
   const [userInputs, setUserInputs] = React.useState({});
   const [results, setResults] = React.useState({});
+  const [picoState, setPicoState] = React.useState({
+    message: "Escreve o nome correspondente a cada emoji!",
+    isSuccess: false
+  });
 
   const handleInputChange = (id, val) => {
     setUserInputs(prev => ({ ...prev, [id]: val }));
@@ -344,16 +414,20 @@ function Grade2Module2({ words, onComplete }) {
     setResults(newResults);
 
     if (correctCount === words.length) {
-      speakWord("Espetacular! Escreveste todas as palavras corretamente!");
+      const successMsg = "Espetacular! Escreveste todas as palavras corretamente!";
+      setPicoState({ message: successMsg, isSuccess: true });
+      speakWord(successMsg);
       if (onComplete) onComplete();
+    } else {
+      const retryMsg = "Confere a ortografia das palavras marcadas a vermelho.";
+      setPicoState({ message: retryMsg, isSuccess: false });
+      speakWord(retryMsg);
     }
   };
 
   return (
     <div style={{ padding: '16px', maxWidth: '500px', margin: '0 auto' }}>
-      <p style={{ textAlign: 'center', color: '#4B5563', marginBottom: '20px', fontWeight: 'bold' }}>
-        Escreve o nome correspondente a cada emoji:
-      </p>
+      <PicoHeader message={picoState.message} isSuccess={picoState.isSuccess} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {words.map(w => {
@@ -414,11 +488,15 @@ function Grade2Module2({ words, onComplete }) {
   );
 }
 
-// 2.º Ano - Módulo 3: Frases com Emojis (Aluno escreve o nome do Emoji)
+// 2.º Ano - Módulo 3: Frases com Emojis (Aluno escreve o nome)
 function Grade2Module3({ words, onComplete }) {
   const sentenceWords = React.useMemo(() => words.slice(0, 5), [words]);
   const [userInputs, setUserInputs] = React.useState({});
   const [results, setResults] = React.useState({});
+  const [picoState, setPicoState] = React.useState({
+    message: "Escreve o nome do emoji para completar cada frase!",
+    isSuccess: false
+  });
 
   const handleInputChange = (id, val) => {
     setUserInputs(prev => ({ ...prev, [id]: val }));
@@ -438,16 +516,20 @@ function Grade2Module3({ words, onComplete }) {
     setResults(newResults);
 
     if (correct === sentenceWords.length) {
-      speakWord("Parabéns! Escreveste o nome de todos os emojis nas frases!");
+      const successMsg = "Parabéns! Escreveste o nome de todos os emojis nas frases!";
+      setPicoState({ message: successMsg, isSuccess: true });
+      speakWord(successMsg);
       if (onComplete) onComplete();
+    } else {
+      const retryMsg = "Há palavras por corrigir. Tenta outra vez!";
+      setPicoState({ message: retryMsg, isSuccess: false });
+      speakWord(retryMsg);
     }
   };
 
   return (
     <div style={{ padding: '16px', maxWidth: '600px', margin: '0 auto' }}>
-      <p style={{ textAlign: 'center', color: '#4B5563', marginBottom: '20px', fontWeight: 'bold' }}>
-        Escreve o nome do emoji para completar cada frase:
-      </p>
+      <PicoHeader message={picoState.message} isSuccess={picoState.isSuccess} />
 
       {sentenceWords.map(w => {
         const beforeText = w.wordBlankBefore || w.blank_before || "O/A ";

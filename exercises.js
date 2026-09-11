@@ -1,24 +1,21 @@
 // exercises.js - Módulos Pedagógicos com o Mocho Pico (PLNN 1.º e 2.º Ano)
 
-// Utilitário de Síntese de Voz (Força pt-PT e filtra sotaque pt-BR)
+// Utilitário de Síntese de Voz (Garantia de pt-PT sem erros de Media)
 function speakWord(text) {
   if (!text) return;
 
+  // 1. Tenta a síntese nativa do browser prioritariamente se existir voz pt-PT
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel();
-
-    // 1. Obtém todas as vozes disponíveis
     const voices = window.speechSynthesis.getVoices();
 
-    // 2. Procura estritamente por vozes de Portugal (exclui explicitamente BR / Brasil)
     const ptPtVoice = voices.find(v => 
       (v.lang === 'pt-PT' || v.lang === 'pt_PT' || v.name.includes('Portugal')) &&
-      !v.lang.includes('BR') && 
-      !v.name.toLowerCase().includes('brazil') &&
-      !v.name.toLowerCase().includes('brasil')
+      !v.lang.toUpperCase().includes('BR') &&
+      !v.name.toUpperCase().includes('BRAZIL') &&
+      !v.name.toUpperCase().includes('BRASIL')
     );
 
-    // 3. Se encontrar uma voz pt-PT real, utiliza-a
     if (ptPtVoice) {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.voice = ptPtVoice;
@@ -29,21 +26,34 @@ function speakWord(text) {
     }
   }
 
-  // 4. Se o sistema NÃO tiver voz pt-PT instalada, usa um fallback de áudio seguro
+  // 2. Fallback remoto de alta fidelidade em pt-PT (Serviço de voz europeia nativo)
   const cleanText = encodeURIComponent(text);
-  const audioUrl = `https://api.streamelements.com/kappa/v2/speech?voice=Titoria&text=${cleanText}`;
+  const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${cleanText}&tl=pt-PT&client=tw-ob`;
 
-  const audio = new Audio(audioUrl);
-  audio.play().catch(err => {
-    console.warn("Erro ao reproduzir o áudio pt-PT remoto:", err);
-  });
+  const audio = new Audio();
+  audio.src = audioUrl;
+
+  // Tenta reproduzir diretamente com tratamento de exceções
+  const playPromise = audio.play();
+  if (playPromise !== undefined) {
+    playPromise.catch(() => {
+      // Se houver restrição do browser ou rede, força com a voz padrão em pt-PT nativa
+      if ('speechSynthesis' in window) {
+        const fallbackUtterance = new SpeechSynthesisUtterance(text);
+        fallbackUtterance.lang = 'pt-PT';
+        fallbackUtterance.rate = 0.85;
+        window.speechSynthesis.speak(fallbackUtterance);
+      }
+    });
+  }
 }
 
-// Garante o carregamento das vozes assim que a página abre
+// Garante o carregamento das vozes locais no arranque
 if ('speechSynthesis' in window) {
   window.speechSynthesis.onvoiceschanged = () => {
     window.speechSynthesis.getVoices();
   };
+  window.speechSynthesis.getVoices();
 }
 // -------------------------------------------------------------
 // COMPONENTE DO MASCOTE MOCHO PICO 🦉

@@ -1,48 +1,42 @@
 // exercises.js - Módulos Pedagógicos para PLNN (1.º e 2.º Ano)
 
 // 1. Utilitário de Síntese de Voz (pt-PT estrito)
-// Utilitário de Síntese de Voz (pt-PT estrito)
+// Utilitário de Síntese de Voz (Garantia de pt-PT estrito)
 function speakWord(text) {
-  if (!('speechSynthesis' in window)) return;
-  
-  // Cancela qualquer som a reproduzir anteriormente
-  window.speechSynthesis.cancel();
+  if (!text) return;
 
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = 'pt-PT';
-  utterance.rate = 0.85; // Velocidade ligeiramente pausada para PLNN
-  utterance.pitch = 1.0;
+  // 1. Procura vozes pt-PT locais no navegador
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    const voices = window.speechSynthesis.getVoices();
 
-  // Força a seleção de voz pt-PT
-  const voices = window.speechSynthesis.getVoices();
-  const ptPtVoice = voices.find(v => 
-    (v.lang === 'pt-PT' || v.lang === 'pt_PT') && 
-    !v.lang.includes('BR') && 
-    !v.name.toLowerCase().includes('brazil')
-  ) || voices.find(v => 
-    v.name.includes('Portugal') || 
-    v.name.includes('Portuguese (Portugal)')
-  );
+    // Filtro rigoroso: Tem de ser pt-PT / pt_PT e NÃO ter BR ou Brasil
+    const strictPtPtVoice = voices.find(v => 
+      (v.lang === 'pt-PT' || v.lang === 'pt_PT') && 
+      !v.lang.toUpperCase().includes('BR') && 
+      !v.name.toUpperCase().includes('BRAZIL') &&
+      !v.name.toUpperCase().includes('BRASIL')
+    );
 
-  if (ptPtVoice) {
-    utterance.voice = ptPtVoice;
+    // Se encontrou uma voz pt-PT real no sistema, usa-a
+    if (strictPtPtVoice) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.voice = strictPtPtVoice;
+      utterance.lang = 'pt-PT';
+      utterance.rate = 0.85;
+      window.speechSynthesis.speak(utterance);
+      return;
+    }
   }
 
-  window.speechSynthesis.speak(utterance);
-}
-
-// Força o carregamento prévio das vozes no navegador
-if ('speechSynthesis' in window) {
-  window.speechSynthesis.onvoiceschanged = () => {
-    window.speechSynthesis.getVoices();
-  };
-  window.speechSynthesis.getVoices();
-}
-
-if ('speechSynthesis' in window) {
-  window.speechSynthesis.onvoiceschanged = () => {
-    window.speechSynthesis.getVoices();
-  };
+  // 2. FALLBACK GARANTIDO: Se o sistema não tiver voz pt-PT instalada, usa o serviço de áudio pt-PT
+  const encodedText = encodeURIComponent(text);
+  const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=pt-PT&client=tw-ob`;
+  
+  const audio = new Audio(audioUrl);
+  audio.play().catch(err => {
+    console.warn("Não foi possível reproduzir o áudio:", err);
+  });
 }
 
 // -------------------------------------------------------------

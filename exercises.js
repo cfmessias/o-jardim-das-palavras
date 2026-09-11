@@ -1,29 +1,45 @@
 // exercises.js - Módulos Pedagógicos com o Mocho Pico (PLNN 1.º e 2.º Ano)
 
-// Utilitário de Síntese de Voz (Nativo e Direto)
+// Utilitário de Síntese de Voz (Força pt-PT e filtra sotaque pt-BR)
 function speakWord(text) {
-  if (!text || !('speechSynthesis' in window)) return;
+  if (!text) return;
 
-  // Cancela qualquer áudio em reprodução
-  window.speechSynthesis.cancel();
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
 
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = 'pt-PT';
-  utterance.rate = 0.85; // Velocidade adequada para PLNN
-  utterance.pitch = 1.0;
+    // 1. Obtém todas as vozes disponíveis
+    const voices = window.speechSynthesis.getVoices();
 
-  // Tenta encontrar uma voz especifica de Portugal se disponível
-  const voices = window.speechSynthesis.getVoices();
-  const ptVoice = voices.find(v => v.lang === 'pt-PT' || v.lang === 'pt_PT');
+    // 2. Procura estritamente por vozes de Portugal (exclui explicitamente BR / Brasil)
+    const ptPtVoice = voices.find(v => 
+      (v.lang === 'pt-PT' || v.lang === 'pt_PT' || v.name.includes('Portugal')) &&
+      !v.lang.includes('BR') && 
+      !v.name.toLowerCase().includes('brazil') &&
+      !v.name.toLowerCase().includes('brasil')
+    );
 
-  if (ptVoice) {
-    utterance.voice = ptVoice;
+    // 3. Se encontrar uma voz pt-PT real, utiliza-a
+    if (ptPtVoice) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.voice = ptPtVoice;
+      utterance.lang = 'pt-PT';
+      utterance.rate = 0.85;
+      window.speechSynthesis.speak(utterance);
+      return;
+    }
   }
 
-  window.speechSynthesis.speak(utterance);
+  // 4. Se o sistema NÃO tiver voz pt-PT instalada, usa um fallback de áudio seguro
+  const cleanText = encodeURIComponent(text);
+  const audioUrl = `https://api.streamelements.com/kappa/v2/speech?voice=Titoria&text=${cleanText}`;
+
+  const audio = new Audio(audioUrl);
+  audio.play().catch(err => {
+    console.warn("Erro ao reproduzir o áudio pt-PT remoto:", err);
+  });
 }
 
-// Inicialização de vozes do browser
+// Garante o carregamento das vozes assim que a página abre
 if ('speechSynthesis' in window) {
   window.speechSynthesis.onvoiceschanged = () => {
     window.speechSynthesis.getVoices();

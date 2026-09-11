@@ -1,19 +1,25 @@
 // exercises.js - Módulos Pedagógicos para PLNN (1.º e 2.º Ano)
 
 // 1. Utilitário de Síntese de Voz (pt-PT estrito)
+// Utilitário de Síntese de Voz (pt-PT estrito)
 function speakWord(text) {
   if (!('speechSynthesis' in window)) return;
-  window.speechSynthesis.cancel();
   
+  // Cancela qualquer som a reproduzir anteriormente
+  window.speechSynthesis.cancel();
+
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = 'pt-PT';
-  utterance.rate = 0.8;
+  utterance.rate = 0.85; // Velocidade ligeiramente pausada para PLNN
   utterance.pitch = 1.0;
 
+  // Força a seleção de voz pt-PT
   const voices = window.speechSynthesis.getVoices();
   const ptPtVoice = voices.find(v => 
-    v.lang === 'pt-PT' || 
-    v.lang === 'pt_PT' || 
+    (v.lang === 'pt-PT' || v.lang === 'pt_PT') && 
+    !v.lang.includes('BR') && 
+    !v.name.toLowerCase().includes('brazil')
+  ) || voices.find(v => 
     v.name.includes('Portugal') || 
     v.name.includes('Portuguese (Portugal)')
   );
@@ -23,6 +29,14 @@ function speakWord(text) {
   }
 
   window.speechSynthesis.speak(utterance);
+}
+
+// Força o carregamento prévio das vozes no navegador
+if ('speechSynthesis' in window) {
+  window.speechSynthesis.onvoiceschanged = () => {
+    window.speechSynthesis.getVoices();
+  };
+  window.speechSynthesis.getVoices();
 }
 
 if ('speechSynthesis' in window) {

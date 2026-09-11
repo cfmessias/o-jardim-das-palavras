@@ -1,47 +1,34 @@
 // exercises.js - Módulos Pedagógicos com o Mocho Pico (PLNN 1.º e 2.º Ano)
 
-// 1. Utilitário de Síntese de Voz (pt-PT estrito)
+// Utilitário de Síntese de Voz (Nativo e Direto)
 function speakWord(text) {
-  if (!text) return;
+  if (!text || !('speechSynthesis' in window)) return;
 
-  if ('speechSynthesis' in window) {
-    window.speechSynthesis.cancel();
-    const voices = window.speechSynthesis.getVoices();
+  // Cancela qualquer áudio em reprodução
+  window.speechSynthesis.cancel();
 
-    const strictPtPtVoice = voices.find(v => 
-      (v.lang === 'pt-PT' || v.lang === 'pt_PT') && 
-      !v.lang.toUpperCase().includes('BR') && 
-      !v.name.toUpperCase().includes('BRAZIL') &&
-      !v.name.toUpperCase().includes('BRASIL')
-    );
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'pt-PT';
+  utterance.rate = 0.85; // Velocidade adequada para PLNN
+  utterance.pitch = 1.0;
 
-    if (strictPtPtVoice) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.voice = strictPtPtVoice;
-      utterance.lang = 'pt-PT';
-      utterance.rate = 0.85;
-      window.speechSynthesis.speak(utterance);
-      return;
-    }
+  // Tenta encontrar uma voz especifica de Portugal se disponível
+  const voices = window.speechSynthesis.getVoices();
+  const ptVoice = voices.find(v => v.lang === 'pt-PT' || v.lang === 'pt_PT');
+
+  if (ptVoice) {
+    utterance.voice = ptVoice;
   }
 
-  // Fallback direto via serviço de áudio remoto pt-PT
-  const encodedText = encodeURIComponent(text);
-  const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=pt-PT&client=tw-ob`;
-  
-  const audio = new Audio(audioUrl);
-  audio.play().catch(err => {
-    console.warn("Erro no áudio:", err);
-  });
+  window.speechSynthesis.speak(utterance);
 }
 
+// Inicialização de vozes do browser
 if ('speechSynthesis' in window) {
   window.speechSynthesis.onvoiceschanged = () => {
     window.speechSynthesis.getVoices();
   };
-  window.speechSynthesis.getVoices();
 }
-
 // -------------------------------------------------------------
 // COMPONENTE DO MASCOTE MOCHO PICO 🦉
 // -------------------------------------------------------------

@@ -22,6 +22,7 @@ function App() {
   const [currentWord, setCurrentWord] = useState(null);
   const [selectedTheme, setSelectedTheme] = useState(null);
   const [currentView, setCurrentView] = useState("student_select");
+  const [editingStudentId, setEditingStudentId] = useState(null);
 
   // Formulários do Professor
   const [loginEmail, setLoginEmail] = useState("");
@@ -69,26 +70,62 @@ function App() {
     if (data) setStudents(data);
     setCurrentView("student_select");
   };
-
+ // Preenche o formulário com os dados do aluno a editar
+  const startEditStudent = (student) => {
+    setEditingStudentId(student.id);
+    setNewStudentName(student.name);
+    setNewStudentPin(student.pin || "");
+    setNewStudentGrade(student.grade?.toString() || "1");
+    setNewStudentPlnnLevel(student.plnn_level || "A1");
+  };
+  
+  // Limpa o formulário e cancela o modo de edição
+  const clearStudentForm = () => {
+    setEditingStudentId(null);
+    setNewStudentName("");
+    setNewStudentPin("");
+    setNewStudentGrade("1");
+    setNewStudentPlnnLevel("A1");
+  };
+  
   // SUSTITUIR a função handleCreateStudent por esta:
-  const handleCreateStudent = async (e) => {
+  const handleStudentSubmit = async (e) => {
     e.preventDefault();
     if (!teacher) return;
+
     try {
-      const created = await createStudent(
-        teacher.id, 
-        newStudentName, 
-        newStudentPin, 
-        newStudentGrade,
-        newStudentPlnnLevel // Novo argumento enviado ao Supabase
-      );
-      setStudents([...students, created]);
-      setNewStudentName("");
-      setNewStudentPin("");
-      setNewStudentGrade("1");
-      setNewStudentPlnnLevel("A1");
+      const payload = {
+        name: newStudentName,
+        pin: newStudentPin,
+        grade: Number(newStudentGrade),
+        plnn_level: newStudentPlnnLevel,
+        teacher_id: teacher.id
+      };
+
+      if (editingStudentId) {
+        // Modo Edição: UPDATE na tabela 'students'
+        const { error } = await supabase
+          .from('students')
+          .update(payload)
+          .eq('id', editingStudentId);
+
+        if (error) throw error;
+      } else {
+        // Modo Criação: INSERT na tabela 'students'
+        const { error } = await supabase
+          .from('students')
+          .insert([payload]);
+
+        if (error) throw error;
+      }
+
+      // Recarrega a lista atualizada e limpa os campos
+      const { data } = await supabase.from('students').select('*').order('name');
+      if (data) setStudents(data);
+      clearStudentForm();
+
     } catch (err) {
-      alert("Erro ao criar aluno: " + err.message);
+      alert("Erro ao guardar aluno: " + err.message);
     }
   };
 
@@ -395,10 +432,10 @@ const handleSelectStudent = async (student) => {
 
           {dashboardTab === "alunos" && (
             <React.Fragment>
-              <h3>Criar Novo Aluno</h3>
+              <h3>{editingStudentId ? "Editar Aluno" : "Criar Novo Aluno"}</h3>
 
               <form 
-                onSubmit={handleCreateStudent} 
+                onSubmit={handleStudentSubmit} 
                 autoComplete="off"
                 style={{ display: 'grid', gap: '12px', gridTemplateColumns: '1fr 1fr 1fr 1fr auto', alignItems: 'end', marginTop: '12px' }}
               >
@@ -451,19 +488,36 @@ const handleSelectStudent = async (student) => {
                   </select>
                 </div>
 
-                <button type="submit" className="btn btn-primary" style={{ height: '42px' }}>Adicionar</button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button type="submit" className="btn btn-primary" style={{ height: '42px' }}>
+                    {editingStudentId ? "Guardar" : "Adicionar"}
+                  </button>
+                  {editingStudentId && (
+                    <button type="button" className="btn btn-outline" style={{ height: '42px' }} onClick={clearStudentForm}>
+                      Cancelar
+                    </button>
+                  )}
+                </div>
               </form>
 
               <hr style={{ margin: '24px 0' }} />
 
               <h3>Alunos Registados ({students.length})</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '12px', marginTop: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px', marginTop: '12px' }}>
                 {students.map((student) => (
                   <div key={student.id} style={{ border: '1px solid #ddd', padding: '12px', borderRadius: '8px', backgroundColor: '#fafafa' }}>
                     <h4 style={{ margin: '0 0 4px 0', color: '#111827' }}>{student.name}</h4>
                     <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>
                       {student.grade}.º Ano • Nível {student.plnn_level || 'A1'}
                     </p>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                      <button type="button" className="link-btn" onClick={() => startEditStudent(student)}>
+                        Editar
+                      </button>
+                      <button type="button" className="link-btn" onClick={() => handleDeleteStudent(student.id)}>
+                        Remover
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

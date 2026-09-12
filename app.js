@@ -11,9 +11,11 @@ function App() {
   const [students, setStudents] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [selectedModuleId, setSelectedModuleId] = useState(1);
-  const [selectedGrade, setSelectedGrade] = useState(1);
-  const [plnnLevel, setPlnnLevel] = useState("A1"); // Nível PLNN para 3º-6º ano
-  
+  const [selectedGrade, setSelectedGrade] = useState(1); 
+  // REMOVIDA esta linha:
+  // const [plnnLevel, setPlnnLevel] = useState("A1");
+  // ADICIONADA esta:
+  const [newStudentPlnnLevel, setNewStudentPlnnLevel] = useState("A1");
   const [words, setWords] = useState([]);
   const [plnnExercises, setPlnnExercises] = useState([]);
   const [progress, setProgress] = useState({});
@@ -68,14 +70,23 @@ function App() {
     setCurrentView("student_select");
   };
 
+  // SUSTITUIR a função handleCreateStudent por esta:
   const handleCreateStudent = async (e) => {
     e.preventDefault();
     if (!teacher) return;
     try {
-      const created = await createStudent(teacher.id, newStudentName, newStudentPin, newStudentGrade);
+      const created = await createStudent(
+        teacher.id, 
+        newStudentName, 
+        newStudentPin, 
+        newStudentGrade,
+        newStudentPlnnLevel // Novo argumento enviado ao Supabase
+      );
       setStudents([...students, created]);
       setNewStudentName("");
       setNewStudentPin("");
+      setNewStudentGrade("1");
+      setNewStudentPlnnLevel("A1");
     } catch (err) {
       alert("Erro ao criar aluno: " + err.message);
     }
@@ -144,54 +155,45 @@ function App() {
   };
 
   // Ações do Aluno e Carregamento de Exercícios por Nível PLNN
-  const handleSelectStudent = async (student) => {
-    const pin = prompt(`Digita o PIN para entrar como ${student.name}:`);
-    if (!pin) return;
+  // REMOVER as funções: fetchPlnnExercises e handleLevelChange
 
-    const validated = await verifyStudentPin(student.id, pin);
-    if (!validated) {
-      alert("PIN incorreto!");
-      return;
-    }
+// SUBSTITUIR a função handleSelectStudent por esta:
+const handleSelectStudent = async (student) => {
+  const pin = prompt(`Digita o teu PIN para entrar, ${student.name}:`);
+  if (!pin) return;
 
-    setSelectedStudent(validated);
-    const gradeNum = Number(validated.grade);
+  const validated = await verifyStudentPin(student.id, pin);
+  if (!validated) {
+    alert("PIN incorreto!");
+    return;
+  }
 
-    if (gradeNum <= 2) {
-      // 1.º e 2.º Ano: Usa Palavras
-      const studentWords = await getWordsByGrade(gradeNum);
-      setWords(studentWords);
-    } else {
-      // 3.º ao 6.º Ano: Usa Exercícios PLNN da Tabela plnn_exercises
-      await fetchPlnnExercises(gradeNum, plnnLevel);
-    }
+  setSelectedStudent(validated);
+  const gradeNum = Number(validated.grade);
+  // Lê diretamente o nível gravado na ficha do aluno
+  const studentPlnnLevel = validated.plnn_level || "A1";
 
-    const studentProgress = await getStudentProgress(validated.id);
-    setProgress(studentProgress);
-    setCurrentView("game");
-  };
-
-  const fetchPlnnExercises = async (grade, level) => {
-    const { data, error } = await supabase
+  if (gradeNum <= 2) {
+    const studentWords = await getWordsByGrade(gradeNum);
+    setWords(studentWords);
+  } else {
+    // Procura na tabela pelo ano e pelo nível atribuído ao aluno
+    const { data } = await supabase
       .from('plnn_exercises')
       .select('*')
-      .eq('grade', grade)
-      .eq('plnn_level', level)
+      .eq('grade', gradeNum)
+      .eq('plnn_level', studentPlnnLevel)
       .order('id');
 
-    if (!error && data) {
-      setPlnnExercises(data);
-    }
-  };
+    setPlnnExercises(data || []);
+  }
 
-  const handleLevelChange = async (newLevel) => {
-    setPlnnLevel(newLevel);
-    if (selectedStudent) {
-      await fetchPlnnExercises(Number(selectedStudent.grade), newLevel);
-    }
-  };
+  const studentProgress = await getStudentProgress(validated.id);
+  setProgress(studentProgress);
+  setCurrentView("game");
+};
 
-  const handleModuleComplete = (moduleId) => {
+   const handleModuleComplete = (moduleId) => {
     alert(`Módulo ${moduleId} concluído com sucesso! ⭐`);
   };
 
@@ -398,7 +400,7 @@ function App() {
               <form 
                 onSubmit={handleCreateStudent} 
                 autoComplete="off"
-                style={{ display: 'grid', gap: '12px', gridTemplateColumns: '1fr 1fr 1fr auto', alignItems: 'end', marginTop: '12px' }}
+                style={{ display: 'grid', gap: '12px', gridTemplateColumns: '1fr 1fr 1fr 1fr auto', alignItems: 'end', marginTop: '12px' }}
               >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Nome do Aluno</label>
@@ -439,6 +441,16 @@ function App() {
                   </select>
                 </div>
 
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Nível PLNN</label>
+                  <select className="input" value={newStudentPlnnLevel} onChange={(e) => setNewStudentPlnnLevel(e.target.value)}>
+                    <option value="A1">Nível A1</option>
+                    <option value="A2">Nível A2</option>
+                    <option value="B1">Nível B1</option>
+                    <option value="B2">Nível B2</option>
+                  </select>
+                </div>
+
                 <button type="submit" className="btn btn-primary" style={{ height: '42px' }}>Adicionar</button>
               </form>
 
@@ -449,7 +461,9 @@ function App() {
                 {students.map((student) => (
                   <div key={student.id} style={{ border: '1px solid #ddd', padding: '12px', borderRadius: '8px', backgroundColor: '#fafafa' }}>
                     <h4 style={{ margin: '0 0 4px 0', color: '#111827' }}>{student.name}</h4>
-                    <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>{student.grade}.º Ano</p>
+                    <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>
+                      {student.grade}.º Ano • Nível {student.plnn_level || 'A1'}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -626,7 +640,7 @@ function App() {
             <div>
               <h2 style={{ margin: 0 }}>Jardim de {selectedStudent?.name}</h2>
               <span style={{ fontSize: '0.9rem', color: '#6b7280' }}>
-                {studentGrade}.º Ano {studentGrade >= 3 && `• Nível PLNN: ${plnnLevel}`}
+                {studentGrade}.º Ano {studentGrade >= 3 && `• Nível PLNN: ${selectedStudent?.plnn_level || 'A1'}`}
               </span>
             </div>
 
@@ -646,34 +660,6 @@ function App() {
               </button>
             )}
           </div>
-
-          {/* SELETOR DE NÍVEL PLNN (Apenas para 3.º ao 6.º Ano) */}
-          {studentGrade >= 3 && (
-            <div style={{ marginBottom: '16px', backgroundColor: '#ECFDF5', padding: '12px', borderRadius: '12px', border: '1px solid #10B981' }}>
-              <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#047857', display: 'block', marginBottom: '8px' }}>
-                Nível de Proficiência PLNN:
-              </label>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {['A1', 'A2', 'B1', 'B2'].map((lvl) => (
-                  <button
-                    key={lvl}
-                    type="button"
-                    onClick={() => handleLevelChange(lvl)}
-                    className={`btn ${plnnLevel === lvl ? 'btn-primary' : 'btn-outline'}`}
-                    style={{
-                      padding: '6px 16px',
-                      fontSize: '0.9rem',
-                      backgroundColor: plnnLevel === lvl ? '#10B981' : '#FFFFFF',
-                      borderColor: '#10B981',
-                      color: plnnLevel === lvl ? '#FFFFFF' : '#047857'
-                    }}
-                  >
-                    Nível {lvl}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* SELETOR DE MÓDULOS */}
           <div style={{ marginBottom: '20px', backgroundColor: '#F3F4F6', padding: '12px', borderRadius: '12px' }}>

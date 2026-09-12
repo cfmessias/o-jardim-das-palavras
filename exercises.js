@@ -1,11 +1,9 @@
-// exercises.js - Módulos Pedagógicos com o Mocho Pico (PLNN 1.º e 2.º Ano)
+// exercises.js - Módulos Pedagógicos com o Mocho Pico (PLNN 1.º ao 6.º Ano)
 
-// Utilitário de Síntese de Voz (Garantia de pt-PT sem erros de Media)
 // Utilitário de Síntese de Voz (Garantia de pt-PT sem erros de Media)
 function speakWord(text) {
   if (!text) return;
 
-  // 1. Tenta a síntese nativa do browser prioritariamente se existir voz pt-PT
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel();
     const voices = window.speechSynthesis.getVoices();
@@ -27,18 +25,15 @@ function speakWord(text) {
     }
   }
 
-  // 2. Fallback remoto de alta fidelidade em pt-PT (Serviço de voz europeia nativo)
   const cleanText = encodeURIComponent(text);
   const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${cleanText}&tl=pt-PT&client=tw-ob`;
 
   const audio = new Audio();
   audio.src = audioUrl;
 
-  // Tenta reproduzir diretamente com tratamento de exceções
   const playPromise = audio.play();
   if (playPromise !== undefined) {
     playPromise.catch(() => {
-      // Se houver restrição do browser ou rede, força com a voz padrão em pt-PT nativa
       if ('speechSynthesis' in window) {
         const fallbackUtterance = new SpeechSynthesisUtterance(text);
         fallbackUtterance.lang = 'pt-PT';
@@ -49,13 +44,13 @@ function speakWord(text) {
   }
 }
 
-// Garante o carregamento das vozes locais no arranque
 if ('speechSynthesis' in window) {
   window.speechSynthesis.onvoiceschanged = () => {
     window.speechSynthesis.getVoices();
   };
   window.speechSynthesis.getVoices();
 }
+
 // -------------------------------------------------------------
 // COMPONENTE DO MASCOTE MOCHO PICO 🦉
 // -------------------------------------------------------------
@@ -112,10 +107,13 @@ function PicoHeader({ message, isSuccess = false }) {
 // COMPONENTES 1.º ANO
 // -------------------------------------------------------------
 
-// 1.º Ano - Módulo 1: Descobrir Palavras
 function Grade1Module1({ words }) {
   const [selectedWord, setSelectedWord] = React.useState(null);
   const [showText, setShowText] = React.useState(false);
+
+  if (!words || words.length === 0) {
+    return <div style={{ textAlign: 'center', padding: '20px' }}>Não há palavras disponíveis para este nível.</div>;
+  }
 
   const handleSelectWord = (w) => {
     setSelectedWord(w);
@@ -126,7 +124,6 @@ function Grade1Module1({ words }) {
     <div style={{ textAlign: 'center', padding: '16px' }}>
       <PicoHeader message="Escolhe um emoji para descobrires como se escreve e como se diz!" />
 
-      {/* Grelha de Emojis */}
       <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '24px' }}>
         {words.map((w) => (
           <button
@@ -147,7 +144,6 @@ function Grade1Module1({ words }) {
         ))}
       </div>
 
-      {/* Cartão de Ação para a Palavra Selecionada */}
       {selectedWord && (
         <div style={{ border: '2px dashed #F2704E', padding: '24px', borderRadius: '16px', backgroundColor: '#FAFAFA', maxWidth: '400px', margin: '0 auto' }}>
           <div style={{ fontSize: '4rem', marginBottom: '12px' }}>{selectedWord.emoji}</div>
@@ -178,8 +174,9 @@ function Grade1Module1({ words }) {
   );
 }
 
-// 1.º e 2.º Ano - Módulo de Letra em Falta
 function MissingLetterList({ words, onComplete }) {
+  if (!words || words.length === 0) return null;
+
   const [preparedWords] = React.useState(() => {
     return words.map(w => {
       const cleanWord = w.word.trim();
@@ -297,8 +294,9 @@ function MissingLetterList({ words, onComplete }) {
   );
 }
 
-// 1.º Ano - Módulo 3: Frases com Escolha de Palavra + Emoji
 function Grade1Module3({ words, onComplete }) {
+  if (!words || words.length === 0) return null;
+
   const sentenceWords = React.useMemo(() => words.slice(0, 5), [words]);
   const [selectedAnswers, setSelectedAnswers] = React.useState({});
   const [results, setResults] = React.useState({});
@@ -340,8 +338,8 @@ function Grade1Module3({ words, onComplete }) {
       <PicoHeader message={picoState.message} isSuccess={picoState.isSuccess} />
 
       {sentenceWords.map(w => {
-        const beforeText = w.wordBlankBefore || w.blank_before || "O/A ";
-        const afterText = w.wordBlankAfter || w.blank_after || "";
+        const beforeText = w.blank_before || "O/A ";
+        const afterText = w.blank_after || "";
         const isCorrect = results[w.id] === true;
         const isWrong = results[w.id] === false;
 
@@ -401,8 +399,9 @@ function Grade1Module3({ words, onComplete }) {
 // COMPONENTES 2.º ANO
 // -------------------------------------------------------------
 
-// 2.º Ano - Módulo 2: Escrita Completa da Palavra a partir do Emoji
 function Grade2Module2({ words, onComplete }) {
+  if (!words || words.length === 0) return null;
+
   const [userInputs, setUserInputs] = React.useState({});
   const [results, setResults] = React.useState({});
   const [picoState, setPicoState] = React.useState({
@@ -502,8 +501,9 @@ function Grade2Module2({ words, onComplete }) {
   );
 }
 
-// 2.º Ano - Módulo 3: Frases com Emojis (Aluno escreve o nome)
 function Grade2Module3({ words, onComplete }) {
+  if (!words || words.length === 0) return null;
+
   const sentenceWords = React.useMemo(() => words.slice(0, 5), [words]);
   const [userInputs, setUserInputs] = React.useState({});
   const [results, setResults] = React.useState({});
@@ -546,8 +546,8 @@ function Grade2Module3({ words, onComplete }) {
       <PicoHeader message={picoState.message} isSuccess={picoState.isSuccess} />
 
       {sentenceWords.map(w => {
-        const beforeText = w.wordBlankBefore || w.blank_before || "O/A ";
-        const afterText = w.wordBlankAfter || w.blank_after || "";
+        const beforeText = w.blank_before || "O/A ";
+        const afterText = w.blank_after || "";
         const isCorrect = results[w.id] === true;
         const isWrong = results[w.id] === false;
 
@@ -596,26 +596,25 @@ function Grade2Module3({ words, onComplete }) {
   );
 }
 
-// =============================================================
-// COMPONENTES 3.º E 4.º ANO (PLNN)
-// =============================================================
+// -------------------------------------------------------------
+// COMPONENTES 3.º, 4.º, 5.º E 6.º ANO (PLNN)
+// -------------------------------------------------------------
 
-// 3.º Ano - Módulo 1: Concordância e Flexão (Gênero, Número e Tempo)
 function Grade3Module1({ exercises, onComplete }) {
   const [currentIndex, setCurrentIndex] = React.useState(0);
   const [selectedOption, setSelectedOption] = React.useState(null);
   const [result, setResult] = React.useState(null);
-  const [picoState, setPicoState] = React.useState({
-    message: exercises[0]?.prompt || "Escolhe a palavra correta para completar a frase!",
-    isSuccess: false
-  });
+
+  if (!exercises || exercises.length === 0) {
+    return <div style={{ textAlign: 'center', padding: '20px' }}>Não há exercícios de concordância disponíveis para este nível.</div>;
+  }
 
   const currentEx = exercises[currentIndex];
-  if (!currentEx) return null;
-
-  const content = typeof currentEx.content === 'string' 
+  const content = typeof currentEx?.content === 'string' 
     ? JSON.parse(currentEx.content) 
-    : currentEx.content;
+    : currentEx?.content;
+
+  if (!content) return null;
 
   const handleSelectOption = (opt) => {
     setSelectedOption(opt);
@@ -630,7 +629,6 @@ function Grade3Module1({ exercises, onComplete }) {
 
     if (isCorrect) {
       const successMsg = "Excelente! A concordância está perfeita!";
-      setPicoState({ message: successMsg, isSuccess: true });
       speakWord(successMsg);
 
       setTimeout(() => {
@@ -638,26 +636,21 @@ function Grade3Module1({ exercises, onComplete }) {
           setCurrentIndex(prev => prev + 1);
           setSelectedOption(null);
           setResult(null);
-          setPicoState({ 
-            message: exercises[currentIndex + 1]?.prompt || "Escolhe a palavra correta!", 
-            isSuccess: false 
-          });
         } else {
           if (onComplete) onComplete();
         }
       }, 1800);
     } else {
       const retryMsg = "Quase lá! Tenta outra opção para fazer sentido.";
-      setPicoState({ message: retryMsg, isSuccess: false });
       speakWord(retryMsg);
     }
   };
 
-  const sentenceParts = content.sentence_template.split('___');
+  const sentenceParts = (content.sentence_template || "___").split('___');
 
   return (
     <div style={{ padding: '16px', maxWidth: '550px', margin: '0 auto', textAlign: 'center' }}>
-      <PicoHeader message={picoState.message} isSuccess={picoState.isSuccess} />
+      <PicoHeader message={currentEx?.prompt || "Escolhe a palavra correta para completar a frase!"} isSuccess={result === true} />
 
       <div style={{
         backgroundColor: '#FAFAFA',
@@ -682,7 +675,7 @@ function Grade3Module1({ exercises, onComplete }) {
         </div>
 
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
-          {content.options.map((opt, idx) => (
+          {content.options?.map((opt, idx) => (
             <button
               key={idx}
               type="button"
@@ -727,21 +720,22 @@ function Grade3Module1({ exercises, onComplete }) {
   );
 }
 
-// 3.º Ano - Módulo 2: Reconstituição e Ordem Frásica (Puzzle de Sintaxe)
 function Grade3Module2({ exercises, onComplete }) {
   const [currentIndex, setCurrentIndex] = React.useState(0);
+
+  if (!exercises || exercises.length === 0) {
+    return <div style={{ textAlign: 'center', padding: '20px' }}>Não há exercícios de sintaxe disponíveis para este nível.</div>;
+  }
+
   const currentEx = exercises[currentIndex];
-  
-  if (!currentEx) return null;
-
-  const content = typeof currentEx.content === 'string' 
+  const content = typeof currentEx?.content === 'string' 
     ? JSON.parse(currentEx.content) 
-    : currentEx.content;
+    : currentEx?.content;
 
-  const [availableWords, setAvailableWords] = React.useState(content.scrambled);
+  const [availableWords, setAvailableWords] = React.useState(content?.scrambled || []);
   const [builtSentence, setBuiltSentence] = React.useState([]);
   const [picoState, setPicoState] = React.useState({
-    message: currentEx.prompt || "Clica nas palavras pela ordem correta!",
+    message: currentEx?.prompt || "Clica nas palavras pela ordem correta!",
     isSuccess: false
   });
 
@@ -786,7 +780,6 @@ function Grade3Module2({ exercises, onComplete }) {
     <div style={{ padding: '16px', maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
       <PicoHeader message={picoState.message} isSuccess={picoState.isSuccess} />
 
-      {/* Área da Frase a ser Construída */}
       <div style={{
         minHeight: '70px',
         backgroundColor: '#F3F4F6',
@@ -817,7 +810,6 @@ function Grade3Module2({ exercises, onComplete }) {
         ))}
       </div>
 
-      {/* Palavras Disponíveis */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center', marginBottom: '24px' }}>
         {availableWords.map((word, idx) => (
           <button
@@ -843,20 +835,21 @@ function Grade3Module2({ exercises, onComplete }) {
   );
 }
 
-// 4.º Ano - Módulo 3: Leitura e Interpretação de Microtextos
 function Grade4Module3({ exercises, onComplete }) {
   const [currentIndex, setCurrentIndex] = React.useState(0);
+
+  if (!exercises || exercises.length === 0) {
+    return <div style={{ textAlign: 'center', padding: '20px' }}>Não há textos de interpretação disponíveis para este nível.</div>;
+  }
+
   const currentEx = exercises[currentIndex];
-
-  if (!currentEx) return null;
-
-  const content = typeof currentEx.content === 'string' 
+  const content = typeof currentEx?.content === 'string' 
     ? JSON.parse(currentEx.content) 
-    : currentEx.content;
+    : currentEx?.content;
 
   const [answers, setAnswers] = React.useState({});
   const [picoState, setPicoState] = React.useState({
-    message: currentEx.prompt || "Lê o texto com atenção e responde às perguntas!",
+    message: currentEx?.prompt || "Lê o texto com atenção e responde às perguntas!",
     isSuccess: false
   });
 
@@ -898,7 +891,6 @@ function Grade4Module3({ exercises, onComplete }) {
     <div style={{ padding: '16px', maxWidth: '650px', margin: '0 auto' }}>
       <PicoHeader message={picoState.message} isSuccess={picoState.isSuccess} />
 
-      {/* Cartão de Leitura do Texto */}
       <div style={{
         backgroundColor: '#FFFBEB',
         border: '2px solid #F59E0B',
@@ -908,9 +900,9 @@ function Grade4Module3({ exercises, onComplete }) {
         boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-          <h3 style={{ margin: 0, color: '#D97706', fontSize: '1.2rem' }}>📖 {currentEx.title}</h3>
+          <h3 style={{ margin: 0, color: '#D97706', fontSize: '1.2rem' }}>📖 {currentEx?.title}</h3>
           <button
-            onClick={() => speakWord(content.text)}
+            onClick={() => speakWord(content?.text)}
             className="btn btn-outline"
             style={{ padding: '4px 10px', fontSize: '0.9rem' }}
           >
@@ -918,13 +910,12 @@ function Grade4Module3({ exercises, onComplete }) {
           </button>
         </div>
         <p style={{ fontSize: '1.15rem', lineHeight: '1.6', color: '#1F2937', margin: 0 }}>
-          {content.text}
+          {content?.text}
         </p>
       </div>
 
-      {/* Lista de Perguntas */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '24px' }}>
-        {content.questions.map((q, qIdx) => (
+        {content?.questions?.map((q, qIdx) => (
           <div key={q.id} style={{ backgroundColor: '#FAFAFA', padding: '16px', borderRadius: '12px', border: '1px solid #E5E7EB' }}>
             <div style={{ fontWeight: 'bold', fontSize: '1.05rem', color: '#111827', marginBottom: '12px' }}>
               {qIdx + 1}. {q.question}
@@ -953,13 +944,13 @@ function Grade4Module3({ exercises, onComplete }) {
 
       <button
         onClick={handleVerify}
-        disabled={Object.keys(answers).length < content.questions.length}
+        disabled={Object.keys(answers).length < (content?.questions?.length || 0)}
         className="btn btn-primary"
         style={{
           width: '100%',
           padding: '12px',
           fontSize: '1.1rem',
-          opacity: Object.keys(answers).length === content.questions.length ? 1 : 0.6
+          opacity: Object.keys(answers).length === (content?.questions?.length || 0) ? 1 : 0.6
         }}
       >
         Verificar Respostas

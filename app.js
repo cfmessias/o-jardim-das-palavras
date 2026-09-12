@@ -1,4 +1,4 @@
-// app.js - Fluxo principal, Estado Global e Inicialização
+// app.js - Fluxo principal, Estado Global e Inicialização (Com Suporte PLNN A1-B2)
 
 const { useState, useEffect } = React;
 
@@ -10,15 +10,18 @@ function App() {
   const [teacher, setTeacher] = useState(null);
   const [students, setStudents] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
-  const [selectedModuleId, setSelectedModuleId] = useState(1)
+  const [selectedModuleId, setSelectedModuleId] = useState(1);
   const [selectedGrade, setSelectedGrade] = useState(1);
+  const [plnnLevel, setPlnnLevel] = useState("A1"); // Nível PLNN para 3º-6º ano
+  
   const [words, setWords] = useState([]);
+  const [plnnExercises, setPlnnExercises] = useState([]);
   const [progress, setProgress] = useState({});
   const [currentWord, setCurrentWord] = useState(null);
   const [selectedTheme, setSelectedTheme] = useState(null);
   const [currentView, setCurrentView] = useState("student_select");
 
-  // Formulários
+  // Formulários do Professor
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPin, setLoginPin] = useState("");
   const [newStudentName, setNewStudentName] = useState("");
@@ -78,7 +81,6 @@ function App() {
     }
   };
 
-  // Ações do professor sobre as palavras
   const clearWordForm = () => {
     setEditingWordId(null);
     setWordText("");
@@ -141,7 +143,7 @@ function App() {
     setAllWords(await getAllWords());
   };
 
-  // Ações do Aluno
+  // Ações do Aluno e Carregamento de Exercícios por Nível PLNN
   const handleSelectStudent = async (student) => {
     const pin = prompt(`Digita o PIN para entrar como ${student.name}:`);
     if (!pin) return;
@@ -153,30 +155,46 @@ function App() {
     }
 
     setSelectedStudent(validated);
-    const studentWords = await getWordsByGrade(validated.grade);
-    const studentProgress = await getStudentProgress(validated.id);
+    const gradeNum = Number(validated.grade);
 
-    setWords(studentWords);
+    if (gradeNum <= 2) {
+      // 1.º e 2.º Ano: Usa Palavras
+      const studentWords = await getWordsByGrade(gradeNum);
+      setWords(studentWords);
+    } else {
+      // 3.º ao 6.º Ano: Usa Exercícios PLNN da Tabela plnn_exercises
+      await fetchPlnnExercises(gradeNum, plnnLevel);
+    }
+
+    const studentProgress = await getStudentProgress(validated.id);
     setProgress(studentProgress);
     setCurrentView("game");
   };
 
-  const handleStageComplete = async (nextStage, writtenSentence = null) => {
-    if (!selectedStudent || !currentWord) return;
+  const fetchPlnnExercises = async (grade, level) => {
+    const { data, error } = await supabase
+      .from('plnn_exercises')
+      .select('*')
+      .eq('grade', grade)
+      .eq('plnn_level', level)
+      .order('id');
 
-    await saveStudentProgress(selectedStudent.id, currentWord.id, nextStage, writtenSentence);
-    
-    setProgress((prev) => ({
-      ...prev,
-      [currentWord.id]: {
-        ...prev[currentWord.id],
-        stage: nextStage,
-        written_sentence: writtenSentence || prev[currentWord.id]?.written_sentence
-      }
-    }));
+    if (!error && data) {
+      setPlnnExercises(data);
+    }
   };
 
-  const totalStars = Object.values(progress).reduce((acc, curr) => acc + (curr.stage || 0), 0);
+  const handleLevelChange = async (newLevel) => {
+    setPlnnLevel(newLevel);
+    if (selectedStudent) {
+      await fetchPlnnExercises(Number(selectedStudent.grade), newLevel);
+    }
+  };
+
+  const handleModuleComplete = (moduleId) => {
+    alert(`Módulo ${moduleId} concluído com sucesso! ⭐`);
+  };
+
   const filteredStudents = students.filter(s => Number(s.grade) === Number(selectedGrade));
 
   // 1. ECRÃ INICIAL: Seleção do Aluno
@@ -349,7 +367,7 @@ function App() {
       <div className="container">
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2>👨‍🏫Painel do Professor</h2>
+            <h2>👨‍🏫 Painel do Professor</h2>
             <button onClick={handleLogout} className="btn btn-outline">Sair</button>
           </div>
           <p>Prof. {teacher?.name} ({teacher?.school || "Escola"})</p>
@@ -377,7 +395,6 @@ function App() {
             <React.Fragment>
               <h3>Criar Novo Aluno</h3>
 
-              {/* autoComplete="off" e labels previnem que o browser preencha com os dados do professor */}
               <form 
                 onSubmit={handleCreateStudent} 
                 autoComplete="off"
@@ -535,10 +552,6 @@ function App() {
                 </div>
               </form>
 
-              <p style={{ marginTop: '8px', color: '#6b7280', fontSize: '0.85rem' }}>
-                Pré-visualização da frase: "{wordBlankBefore}<strong>{wordText || "..."}</strong>{wordBlankAfter}"
-              </p>
-
               <hr style={{ margin: '24px 0' }} />
 
               <h3>Palavras Registadas ({allWords.length})</h3>
@@ -561,50 +574,47 @@ function App() {
     );
   }
 
-  // 4. ECRÃ: Visão do Aluno / Jogo
-if (currentView === "game") {
-    // 1. Obtém o ano do aluno (usa selectedStudent com fallback de segurança para 1)
-    const studentGrade = selectedStudent?.grade || 1;
-
-    // 2. Módulos fixos de 1 a 3 para a dinâmica dos 1.º e 2.º anos
-    const availableModules = [
-      { id: 1, title: "Módulo 1" },
-      { id: 2, title: "Módulo 2" },
-      { id: 3, title: "Módulo 3" }
-    ];
+  // 4. ECRÃ: Visão do Aluno / Jogo Pedagógico PLNN
+  if (currentView === "game") {
+    const studentGrade = Number(selectedStudent?.grade || 1);
     const activeModuleId = selectedModuleId || 1;
 
-    // 3. Filtra palavras pelo ano e pelo tema selecionado
-    const currentGradeWords = words.filter(w => (w.grade || 1) === studentGrade);
-    const availableThemes = [...new Set(currentGradeWords.map(w => w.theme || "Geral"))];
-    const activeTheme = selectedTheme || availableThemes[0] || "Geral";
-    const filteredWords = currentGradeWords.filter(w => (w.theme || "Geral") === activeTheme);
+    // Lista de módulos disponíveis dependendo do Ano
+    const availableModules = [
+      { id: 1, title: studentGrade <= 2 ? "Descobre a Palavra" : "Gramática & Concordância" },
+      { id: 2, title: studentGrade <= 2 ? "Letra em Falta" : "Construção de Frases" },
+      { id: 3, title: studentGrade <= 2 ? "Completa a Frase" : "Leitura & Interpretação" }
+    ];
 
-    // 4. Função de Roteamento Dinâmico para os Componentes do exercises.js
+    // Roteamento Dinâmico dos Componentes do exercises.js
     const renderActiveExercise = () => {
-      if (filteredWords.length === 0) {
-        return (
-          <div style={{ textAlign: 'center', padding: '24px', color: '#6B7280' }}>
-            Não existem palavras configuradas para este tema ou ano.
-          </div>
-        );
-      }
-
-      // Lógica do 1.º Ano
+      // 1.º e 2.º ANO (Lógica de Vocabulário & Leitura Inicial)
       if (studentGrade === 1) {
-        if (activeModuleId === 1) return <Grade1Module1 words={filteredWords} />;
-        if (activeModuleId === 2) return <MissingLetterList words={filteredWords} onComplete={() => handleModuleComplete(1)} />;
-        if (activeModuleId === 3) return <Grade1Module3 words={filteredWords} onComplete={() => handleModuleComplete(2)} />;
+        if (activeModuleId === 1) return <Grade1Module1 words={words} />;
+        if (activeModuleId === 2) return <MissingLetterList words={words} onComplete={() => handleModuleComplete(2)} />;
+        if (activeModuleId === 3) return <Grade1Module3 words={words} onComplete={() => handleModuleComplete(3)} />;
       }
 
-      // Lógica do 2.º Ano
       if (studentGrade === 2) {
-        if (activeModuleId === 1) return <MissingLetterList words={filteredWords} onComplete={() => handleModuleComplete(1)} />;
-        if (activeModuleId === 2) return <Grade2Module2 words={filteredWords} onComplete={() => handleModuleComplete(2)} />;
-        if (activeModuleId === 3) return <Grade2Module3 words={filteredWords} onComplete={() => handleModuleComplete(3)} />;
+        if (activeModuleId === 1) return <MissingLetterList words={words} onComplete={() => handleModuleComplete(1)} />;
+        if (activeModuleId === 2) return <Grade2Module2 words={words} onComplete={() => handleModuleComplete(2)} />;
+        if (activeModuleId === 3) return <Grade2Module3 words={words} onComplete={() => handleModuleComplete(3)} />;
       }
 
-      return <Grade1Module1 words={filteredWords} />;
+      // 3.º ao 6.º ANO (Lógica de Módulos PLNN: A1, A2, B1, B2)
+      const moduleExercises = plnnExercises.filter(ex => ex.module_id === activeModuleId);
+
+      if (activeModuleId === 1) {
+        return <Grade3Module1 exercises={moduleExercises} onComplete={() => handleModuleComplete(1)} />;
+      }
+      if (activeModuleId === 2) {
+        return <Grade3Module2 exercises={moduleExercises} onComplete={() => handleModuleComplete(2)} />;
+      }
+      if (activeModuleId === 3) {
+        return <Grade4Module3 exercises={moduleExercises} onComplete={() => handleModuleComplete(3)} />;
+      }
+
+      return <Grade1Module1 words={words} />;
     };
 
     return (
@@ -616,11 +626,10 @@ if (currentView === "game") {
             <div>
               <h2 style={{ margin: 0 }}>Jardim de {selectedStudent?.name}</h2>
               <span style={{ fontSize: '0.9rem', color: '#6b7280' }}>
-                {studentGrade}.º Ano • ⭐ {Object.keys(progress || {}).length} Concluídas
+                {studentGrade}.º Ano {studentGrade >= 3 && `• Nível PLNN: ${plnnLevel}`}
               </span>
             </div>
 
-            {/* Ação: Se houver professor faz "Voltar ao Painel", senão faz "Sair" */}
             {teacher ? (
               <button onClick={() => setCurrentView("dashboard")} className="btn btn-outline">
                 ← Voltar ao Painel
@@ -637,6 +646,34 @@ if (currentView === "game") {
               </button>
             )}
           </div>
+
+          {/* SELETOR DE NÍVEL PLNN (Apenas para 3.º ao 6.º Ano) */}
+          {studentGrade >= 3 && (
+            <div style={{ marginBottom: '16px', backgroundColor: '#ECFDF5', padding: '12px', borderRadius: '12px', border: '1px solid #10B981' }}>
+              <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#047857', display: 'block', marginBottom: '8px' }}>
+                Nível de Proficiência PLNN:
+              </label>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {['A1', 'A2', 'B1', 'B2'].map((lvl) => (
+                  <button
+                    key={lvl}
+                    type="button"
+                    onClick={() => handleLevelChange(lvl)}
+                    className={`btn ${plnnLevel === lvl ? 'btn-primary' : 'btn-outline'}`}
+                    style={{
+                      padding: '6px 16px',
+                      fontSize: '0.9rem',
+                      backgroundColor: plnnLevel === lvl ? '#10B981' : '#FFFFFF',
+                      borderColor: '#10B981',
+                      color: plnnLevel === lvl ? '#FFFFFF' : '#047857'
+                    }}
+                  >
+                    Nível {lvl}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* SELETOR DE MÓDULOS */}
           <div style={{ marginBottom: '20px', backgroundColor: '#F3F4F6', padding: '12px', borderRadius: '12px' }}>
@@ -661,29 +698,9 @@ if (currentView === "game") {
             </div>
           </div>
 
-          {/* SELETOR DE TEMAS */}
-          {availableThemes.length > 0 && (
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
-              {availableThemes.map((theme) => (
-                <button
-                  key={theme}
-                  onClick={() => setSelectedTheme(theme)}
-                  className={`btn ${activeTheme === theme ? 'btn-primary' : 'btn-outline'}`}
-                  style={{
-                    backgroundColor: activeTheme === theme ? '#3B82F6' : '#FFFFFF',
-                    color: activeTheme === theme ? '#FFFFFF' : '#374151',
-                    borderColor: '#E5E7EB'
-                  }}
-                >
-                  {theme}
-                </button>
-              ))}
-            </div>
-          )}
-
           <hr style={{ margin: '20px 0', border: '0', borderTop: '1px solid #E5E7EB' }} />
 
-          {/* ÁREA PRINCIPAL DO EXERCÍCIO (Substitui a antiga grelha) */}
+          {/* ÁREA PRINCIPAL DO EXERCÍCIO */}
           <div style={{ marginTop: '16px' }}>
             {renderActiveExercise()}
           </div>
@@ -692,93 +709,8 @@ if (currentView === "game") {
       </div>
     );
   }
+}
 
-  // 5. ECRÃ: Execução do Exercício
-  if (currentView === "exercise" && currentWord) {
-    const activeModuleId = selectedModuleId || 1;
-
-    return (
-      <div className="container" style={{ maxWidth: '600px', margin: '0 auto', padding: '16px' }}>
-        <div className="card">
-          <button 
-            onClick={() => setCurrentView("game")} 
-            className="btn btn-outline" 
-            style={{ marginBottom: '16px' }}
-          >
-            ← Voltar às Palavras
-          </button>
-
-          {/* Módulo 1: Fluxo Tradicional */}
-          {activeModuleId === 1 && (
-            <ActivityStages 
-              word={currentWord} 
-              stage={(progress && progress[currentWord.id]) || 0}
-              onComplete={(stageCompleted, sentence) => {
-                if (typeof saveProgress === 'function') {
-                  saveProgress(selectedStudent.id, currentWord.id, stageCompleted, sentence);
-                }
-              }}
-            />
-          )}
-
-         {/* Módulo 2: Completa a Frase */}
-          {activeModuleId === 2 && (
-            <div>
-              <h3 style={{ textAlign: 'center', color: '#374151', marginBottom: '20px' }}>
-                Módulo 2: Completa a Frase
-              </h3>
-
-              <MissingWordExercise 
-                word={currentWord} 
-                onSuccess={() => {
-                  // Monta a frase completa com base nos campos do data.js
-                  const beforeText = currentWord.wordBlankBefore || "";
-                  const afterText = currentWord.wordBlankAfter || "";
-                  const fullSentence = `${beforeText} ${currentWord.word} ${afterText}`.trim();
-
-                  // Guarda o progresso e a frase no Supabase
-                  if (typeof saveProgress === 'function') {
-                    saveProgress(selectedStudent.id, currentWord.id, 3, fullSentence);
-                  }
-
-                  // Atualiza o estado local para dar a estrela
-                  if (typeof setProgress === 'function') {
-                    setProgress(prev => ({
-                      ...prev,
-                      [currentWord.id]: 3
-                    }));
-                  }
-
-                  alert("Muito bem! Frase completada com sucesso! ⭐");
-                  setCurrentView("game");
-                }} 
-              />
-            </div>
-          )}
-
-          {/* Módulo 3: Desafios Visuais */}
-          {activeModuleId === 3 && (
-            <div style={{ textAlign: 'center', padding: '20px' }}>
-              <h3>Módulo 4: Desafio Visual</h3>
-              <div style={{ fontSize: '4rem', margin: '20px 0' }}>{currentWord.emoji}</div>
-              <p style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{currentWord.word}</p>
-              <button 
-                onClick={() => {
-                  if (typeof saveProgress === 'function') {
-                    saveProgress(selectedStudent.id, currentWord.id, 3, "Concluído via Desafio Visual");
-                  }
-                  setCurrentView("game");
-                }} 
-                className="btn btn-primary"
-              >
-                Concluir Desafio ⭐
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }}
 const rootElement = document.getElementById("root");
 if (rootElement) {
   ReactDOM.render(<App />, rootElement);

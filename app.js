@@ -488,7 +488,7 @@ const handleSelectStudent = async (student) => {
                   </select>
                 </div>
 
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '6px' }}>
                   <button type="submit" className="btn btn-primary" style={{ height: '42px' }}>
                     {editingStudentId ? "Guardar" : "Adicionar"}
                   </button>

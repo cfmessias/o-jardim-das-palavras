@@ -671,8 +671,8 @@ const handleSelectStudent = async (student) => {
                   ))}
               </div>
             </React.Fragment>
-          )
-}
+          );
+    }
   
 
   // 4. ECRÃ: Visão do Aluno / Jogo Pedagógico PLNN

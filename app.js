@@ -740,6 +740,7 @@ const handleSelectStudent = async (student) => {
 
           <hr style={{ margin: '20px 0', border: '0', borderTop: '1px solid #E5E7EB' }} />
 
+
           {/* ÁREA PRINCIPAL DO EXERCÍCIO */}
           <div style={{ marginTop: '16px' }}>
             {renderActiveExercise()}

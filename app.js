@@ -312,13 +312,13 @@ const handleSelectStudent = async (student) => {
 
           <hr style={{ margin: '24px 0', border: 'none', borderTop: '1px solid #eee' }} />
 
-          <button
-            className="link-btn"
-            onClick={() => setCurrentView(teacher ? "dashboard" : "auth")}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d97706' }}
-          >
-            🦉 Acesso do professor
-          </button>
+         // <button
+         //   className="link-btn"
+         //   onClick={() => setCurrentView(teacher ? "dashboard" : "auth")}
+         //   style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d97706' }}
+         // >
+         //   🦉 Acesso do professor
+         // </button>
         </div>
       </div>
     );

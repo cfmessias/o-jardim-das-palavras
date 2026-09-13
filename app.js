@@ -3,11 +3,21 @@
 const { useState, useEffect } = React;
 
 function App() {
+ // Verifica se o URL contém "?prof"
+  const isProfUrl = window.location.search.includes("prof");
+
   // Estado Global
   const [isRegistering, setIsRegistering] = useState(false);
   const [regName, setRegName] = useState("");
   const [regSchool, setRegSchool] = useState("");
-  const [teacher, setTeacher] = useState(null);
+
+  // Só carrega o professor do localStorage se estivermos no URL "?prof"
+  const [teacher, setTeacher] = useState(() => {
+    if (!isProfUrl) return null;
+    const saved = localStorage.getItem("jardim_teacher");
+    return saved ? JSON.parse(saved) : null;
+  });
+
   const [students, setStudents] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [selectedModuleId, setSelectedModuleId] = useState(1);
@@ -18,15 +28,17 @@ function App() {
   const [progress, setProgress] = useState({});
   const [currentWord, setCurrentWord] = useState(null);
   const [selectedTheme, setSelectedTheme] = useState(null);
-  //const [currentView, setCurrentView] = useState("student_select");
-  // Verifica se o URL contém "?prof"
-  const isProfUrl = window.location.search.includes("prof");
 
-  // Se tiver "?prof", abre na login de professor; caso contrário, abre na seleção de aluno
-  const [currentView, setCurrentView] = useState(isProfUrl ? "teacher_login" : "student_select");
-  
+  // Define a vista inicial: se for URL de prof e já tiver sessão, vai para o dashboard; senão login ou alunos
+  const [currentView, setCurrentView] = useState(() => {
+    if (isProfUrl) {
+      const saved = localStorage.getItem("jardim_teacher");
+      return saved ? "dashboard" : "teacher_login";
+    }
+    return "student_select";
+  });
+
   const [editingStudentId, setEditingStudentId] = useState(null);
-
   // Formulários do Professor
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPin, setLoginPin] = useState("");

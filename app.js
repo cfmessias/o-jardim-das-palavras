@@ -414,7 +414,6 @@ const handleSelectStudent = async (student) => {
   }
 
   // 3. ECRÃ: Painel do Professor (Dashboard)
- // 3. ECRÃ: Painel do Professor (Dashboard)
   if (currentView === "dashboard") {
     return (
       <div className="container">
@@ -543,147 +542,163 @@ const handleSelectStudent = async (student) => {
           )}
 
           {dashboardTab === "palavras" && (
-            <React.Fragment>
-              <h3>{editingWordId ? "Editar Palavra" : "Criar Nova Palavra"}</h3>
-
-              <form
-                onSubmit={handleWordSubmit}
-                autoComplete="off"
-                style={{ display: 'grid', gap: '12px', gridTemplateColumns: '1fr 1fr 1fr', marginTop: '12px' }}
+  <React.Fragment>
+    {/* 1. SELEÇÃO DE CONTEXTO / FILTROS GLOBAIS */}
+    <div style={{ backgroundColor: '#f9fafb', padding: '16px', borderRadius: '12px', border: '1px solid #e5e7eb', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        
+        {/* Filtro por Ano Escolar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <span style={{ fontWeight: 'bold', fontSize: '0.9rem', color: '#374151', minWidth: '100px' }}>Ano Escolar:</span>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            {[1, 2, 3, 4, 5, 6].map((grade) => (
+              <button
+                key={grade}
+                type="button"
+                className={`btn ${Number(selectedGrade) === grade ? 'btn-primary' : 'btn-outline'}`}
+                style={{ padding: '6px 14px', fontSize: '0.85rem', borderRadius: '20px' }}
+                onClick={() => {
+                  setSelectedGrade(grade);
+                  setWordGrade(grade);
+                }}
               >
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Palavra</label>
-                  <input
-                    type="text"
-                    className="input"
-                    placeholder="Ex: gato"
-                    value={wordText}
-                    onChange={(e) => setWordText(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Ano Escolar</label>
-                  <select className="input" value={wordGrade} onChange={(e) => setWordGrade(e.target.value)}>
-                    <option value="1">1.º Ano</option>
-                    <option value="2">2.º Ano</option>
-                    <option value="3">3.º Ano</option>
-                    <option value="4">4.º Ano</option>
-                    <option value="5">5.º Ano</option>
-                    <option value="6">6.º Ano</option>
-                  </select>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Nível PLNN</label>
-                  <select className="input" value={wordPlnnLevel} onChange={(e) => setWordPlnnLevel(e.target.value)}>
-                    <option value="A1">Nível A1</option>
-                    <option value="A2">Nível A2</option>
-                    <option value="B1">Nível B1</option>
-                    <option value="B2">Nível B2</option>
-                  </select>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Emoji</label>
-                  <input
-                    type="text"
-                    className="input"
-                    placeholder="Ex: 🐱"
-                    value={wordEmoji}
-                    onChange={(e) => setWordEmoji(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', gridColumn: 'span 2' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Dica</label>
-                  <input
-                    type="text"
-                    className="input"
-                    placeholder="Ex: Animal doméstico que mia."
-                    value={wordHint}
-                    onChange={(e) => setWordHint(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Início da frase</label>
-                  <input
-                    type="text"
-                    className="input"
-                    placeholder="Ex: O "
-                    value={wordBlankBefore}
-                    onChange={(e) => setWordBlankBefore(e.target.value)}
-                  />
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', gridColumn: 'span 2' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Fim da frase</label>
-                  <input
-                    type="text"
-                    className="input"
-                    placeholder="Ex:  dorme no sofá."
-                    value={wordBlankAfter}
-                    onChange={(e) => setWordBlankAfter(e.target.value)}
-                  />
-                </div>
-
-                <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '10px', marginTop: '8px' }}>
-                  <button type="submit" className="btn btn-primary" disabled={savingWord}>
-                    {editingWordId ? "Guardar alterações" : "Adicionar palavra"}
-                  </button>
-
-                  {editingWordId && (
-                    <button type="button" className="btn btn-outline" onClick={clearWordForm}>
-                      Cancelar edição
-                    </button>
-                  )}
-                </div>
-              </form>
-
-              <hr style={{ margin: '24px 0' }} />
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                <h3>Palavras Registadas ({allWords.length})</h3>
-                
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.85rem', color: '#6b7280', fontWeight: 'bold' }}>Filtrar por ano:</span>
-                  {[1, 2, 3, 4, 5, 6].map((grade) => (
-                    <button
-                      key={grade}
-                      type="button"
-                      className={`btn ${Number(selectedGrade) === grade ? 'btn-primary' : 'btn-outline'}`}
-                      style={{ padding: '4px 10px', fontSize: '0.8rem', borderRadius: '15px' }}
-                      onClick={() => setSelectedGrade(grade)}
-                    >
-                      {grade}.º Ano
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px', marginTop: '16px' }}>
-                {allWords
-                  .filter(w => Number(w.grade) === Number(selectedGrade))
-                  .map((w) => (
-                    <div key={w.id} style={{ border: '1px solid #ddd', padding: '12px', borderRadius: '8px', backgroundColor: '#fafafa' }}>
-                      <h4 style={{ margin: '0 0 4px 0', color: '#111827' }}>{w.emoji} {w.word}</h4>
-                      <p style={{ margin: 0, color: '#6b7280', fontSize: '0.85rem' }}>
-                        {w.grade}.º Ano • Nível {w.plnn_level || 'A1'}
-                      </p>
-                      <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                        <button type="button" className="link-btn" onClick={() => startEditWord(w)}>Editar</button>
-                        <button type="button" className="link-btn" onClick={() => handleDeleteWord(w.id)}>Remover</button>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </React.Fragment>
-          )}
+                {grade}.º Ano
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* Filtro por Nível PLNN */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <span style={{ fontWeight: 'bold', fontSize: '0.9rem', color: '#374151', minWidth: '100px' }}>Nível PLNN:</span>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            {["A1", "A2", "B1", "B2"].map((level) => (
+              <button
+                key={level}
+                type="button"
+                className={`btn ${selectedPlnnLevel === level ? 'btn-primary' : 'btn-outline'}`}
+                style={{ padding: '6px 14px', fontSize: '0.85rem', borderRadius: '20px' }}
+                onClick={() => {
+                  setSelectedPlnnLevel(level);
+                  setWordPlnnLevel(level);
+                }}
+              >
+                Nível {level}
+              </button>
+            ))}
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    {/* 2. FORMULÁRIO DE PARAMETRIZAÇÃO (Herdando o contexto selecionado) */}
+    <h3>{editingWordId ? "Editar Palavra" : `Adicionar Palavra para ${selectedGrade}.º Ano (${selectedPlnnLevel || 'A1'})`}</h3>
+
+    <form
+      onSubmit={handleWordSubmit}
+      autoComplete="off"
+      style={{ display: 'grid', gap: '12px', gridTemplateColumns: '1fr 1fr 2fr', marginTop: '12px' }}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Palavra</label>
+        <input
+          type="text"
+          className="input"
+          placeholder="Ex: gato"
+          value={wordText}
+          onChange={(e) => setWordText(e.target.value)}
+          required
+        />
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Emoji</label>
+        <input
+          type="text"
+          className="input"
+          placeholder="Ex: 🐱"
+          value={wordEmoji}
+          onChange={(e) => setWordEmoji(e.target.value)}
+          required
+        />
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Dica / Significado</label>
+        <input
+          type="text"
+          className="input"
+          placeholder="Ex: Animal doméstico que mia."
+          value={wordHint}
+          onChange={(e) => setWordHint(e.target.value)}
+          required
+        />
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Início da frase</label>
+        <input
+          type="text"
+          className="input"
+          placeholder="Ex: O "
+          value={wordBlankBefore}
+          onChange={(e) => setWordBlankBefore(e.target.value)}
+        />
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', gridColumn: 'span 2' }}>
+        <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Fim da frase</label>
+        <input
+          type="text"
+          className="input"
+          placeholder="Ex:  dorme no sofá."
+          value={wordBlankAfter}
+          onChange={(e) => setWordBlankAfter(e.target.value)}
+        />
+      </div>
+
+      <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '10px', marginTop: '8px' }}>
+        <button type="submit" className="btn btn-primary" disabled={savingWord}>
+          {editingWordId ? "Guardar alterações" : "Adicionar palavra"}
+        </button>
+
+        {editingWordId && (
+          <button type="button" className="btn btn-outline" onClick={clearWordForm}>
+            Cancelar edição
+          </button>
+        )}
+      </div>
+    </form>
+
+    <hr style={{ margin: '24px 0' }} />
+
+    {/* 3. LISTAGEM DE PALAVRAS FILTRADAS */}
+    <h3>
+      Palavras Registadas ({
+        allWords.filter(w => Number(w.grade) === Number(selectedGrade) && (w.plnn_level || 'A1') === selectedPlnnLevel).length
+      })
+    </h3>
+
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px', marginTop: '16px' }}>
+      {allWords
+        .filter(w => Number(w.grade) === Number(selectedGrade) && (w.plnn_level || 'A1') === selectedPlnnLevel)
+        .map((w) => (
+          <div key={w.id} style={{ border: '1px solid #ddd', padding: '12px', borderRadius: '8px', backgroundColor: '#fafafa' }}>
+            <h4 style={{ margin: '0 0 4px 0', color: '#111827' }}>{w.emoji} {w.word}</h4>
+            <p style={{ margin: 0, color: '#6b7280', fontSize: '0.85rem' }}>
+              {w.grade}.º Ano • Nível {w.plnn_level || 'A1'}
+            </p>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+              <button type="button" className="link-btn" onClick={() => startEditWord(w)}>Editar</button>
+              <button type="button" className="link-btn" onClick={() => handleDeleteWord(w.id)}>Remover</button>
+            </div>
+          </div>
+        ))}
+    </div>
+  </React.Fragment>
+)}
+ </div>
       </div>
     );
   }

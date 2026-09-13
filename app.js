@@ -403,6 +403,7 @@ const handleSelectStudent = async (student) => {
   }
 
   // 3. ECRÃ: Painel do Professor (Dashboard)
+ // 3. ECRÃ: Painel do Professor (Dashboard)
   if (currentView === "dashboard") {
     return (
       <div className="container">
@@ -637,7 +638,6 @@ const handleSelectStudent = async (student) => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                 <h3>Palavras Registadas ({allWords.length})</h3>
                 
-                {/* Filtro por Ano */}
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                   <span style={{ fontSize: '0.85rem', color: '#6b7280', fontWeight: 'bold' }}>Filtrar por ano:</span>
                   {[1, 2, 3, 4, 5, 6].map((grade) => (
@@ -671,9 +671,11 @@ const handleSelectStudent = async (student) => {
                   ))}
               </div>
             </React.Fragment>
-          );
-    }
-  
+          )}
+        </div>
+      </div>
+    );
+  }
 
   // 4. ECRÃ: Visão do Aluno / Jogo Pedagógico PLNN
   if (currentView === "game") {

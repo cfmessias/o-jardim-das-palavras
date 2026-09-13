@@ -12,9 +12,6 @@ function App() {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [selectedModuleId, setSelectedModuleId] = useState(1);
   const [selectedGrade, setSelectedGrade] = useState(1); 
-  // REMOVIDA esta linha:
-  // const [plnnLevel, setPlnnLevel] = useState("A1");
-  // ADICIONADA esta:
   const [newStudentPlnnLevel, setNewStudentPlnnLevel] = useState("A1");
   const [words, setWords] = useState([]);
   const [plnnExercises, setPlnnExercises] = useState([]);
@@ -42,6 +39,7 @@ function App() {
   const [wordBlankAfter, setWordBlankAfter] = useState("");
   const [savingWord, setSavingWord] = useState(false);
 
+  const [wordPlnnLevel, setWordPlnnLevel] = useState("A1");
   // Carregar alunos e sessão ao iniciar
   useEffect(() => {
     async function initApp() {
@@ -129,60 +127,64 @@ function App() {
     }
   };
 
-  const clearWordForm = () => {
-    setEditingWordId(null);
-    setWordText("");
-    setWordGrade("1");
-    setWordEmoji("");
-    setWordHint("");
-    setWordBlankBefore("");
-    setWordBlankAfter("");
-  };
-
+  
   const openWordsTab = async () => {
     setDashboardTab("palavras");
     setAllWords(await getAllWords());
   };
+  
+  const clearWordForm = () => {
+  setEditingWordId(null);
+  setWordText("");
+  setWordGrade("1");
+  setWordPlnnLevel("A1");
+  setWordEmoji("");
+  setWordHint("");
+  setWordBlankBefore("");
+  setWordBlankAfter("");
+};
 
-  const startEditWord = (w) => {
-    setEditingWordId(w.id);
-    setWordText(w.word);
-    setWordGrade(String(w.grade));
-    setWordEmoji(w.emoji || "");
-    setWordHint(w.hint || "");
-    setWordBlankBefore(w.blank_before || "");
-    setWordBlankAfter(w.blank_after || "");
+const startEditWord = (w) => {
+  setEditingWordId(w.id);
+  setWordText(w.word);
+  setWordGrade(String(w.grade));
+  setWordPlnnLevel(w.plnn_level || "A1");
+  setWordEmoji(w.emoji || "");
+  setWordHint(w.hint || "");
+  setWordBlankBefore(w.blank_before || "");
+  setWordBlankAfter(w.blank_after || "");
+};
+
+const handleWordSubmit = async (e) => {
+  e.preventDefault();
+  const payload = {
+    word: wordText.trim(),
+    grade: Number(wordGrade),
+    plnn_level: wordPlnnLevel,
+    emoji: wordEmoji.trim(),
+    hint: wordHint.trim(),
+    blankBefore: wordBlankBefore,
+    blankAfter: wordBlankAfter,
   };
 
-  const handleWordSubmit = async (e) => {
-    e.preventDefault();
-    const payload = {
-      word: wordText.trim(),
-      grade: wordGrade,
-      emoji: wordEmoji.trim(),
-      hint: wordHint.trim(),
-      blankBefore: wordBlankBefore,
-      blankAfter: wordBlankAfter,
-    };
+  if (!payload.word || !payload.emoji || !payload.hint) return;
 
-    if (!payload.word || !payload.emoji || !payload.hint) return;
-
-    setSavingWord(true);
-    try {
-      if (editingWordId) {
-        await updateWord(editingWordId, payload);
-      } else {
-        await createWord(payload);
-      }
-      clearWordForm();
-      setAllWords(await getAllWords());
-    } catch (err) {
-      alert("Erro ao guardar palavra: " + err.message);
-    } finally {
-      setSavingWord(false);
+  setSavingWord(true);
+  try {
+    if (editingWordId) {
+      await updateWord(editingWordId, payload);
+    } else {
+      await createWord(payload);
     }
-  };
-
+    clearWordForm();
+    setAllWords(await getAllWords());
+  } catch (err) {
+    alert("Erro ao guardar palavra: " + err.message);
+  } finally {
+    setSavingWord(false);
+  }
+};
+  
   const handleDeleteWord = async (id) => {
     if (!confirm("Remover esta palavra? O progresso dos alunos nesta palavra também será apagado.")) {
       return;
@@ -535,7 +537,7 @@ const handleSelectStudent = async (student) => {
               <form
                 onSubmit={handleWordSubmit}
                 autoComplete="off"
-                style={{ display: 'grid', gap: '12px', gridTemplateColumns: '1fr 1fr', marginTop: '12px' }}
+                style={{ display: 'grid', gap: '12px', gridTemplateColumns: '1fr 1fr 1fr', marginTop: '12px' }}
               >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Palavra</label>
@@ -562,6 +564,16 @@ const handleSelectStudent = async (student) => {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Nível PLNN</label>
+                  <select className="input" value={wordPlnnLevel} onChange={(e) => setWordPlnnLevel(e.target.value)}>
+                    <option value="A1">Nível A1</option>
+                    <option value="A2">Nível A2</option>
+                    <option value="B1">Nível B1</option>
+                    <option value="B2">Nível B2</option>
+                  </select>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Emoji</label>
                   <input
                     type="text"
@@ -573,7 +585,7 @@ const handleSelectStudent = async (student) => {
                   />
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', gridColumn: 'span 2' }}>
                   <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Dica</label>
                   <input
                     type="text"
@@ -596,7 +608,7 @@ const handleSelectStudent = async (student) => {
                   />
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', gridColumn: 'span 2' }}>
                   <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Fim da frase</label>
                   <input
                     type="text"
@@ -607,7 +619,7 @@ const handleSelectStudent = async (student) => {
                   />
                 </div>
 
-                <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '10px' }}>
+                <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '10px', marginTop: '8px' }}>
                   <button type="submit" className="btn btn-primary" disabled={savingWord}>
                     {editingWordId ? "Guardar alterações" : "Adicionar palavra"}
                   </button>
@@ -622,24 +634,44 @@ const handleSelectStudent = async (student) => {
 
               <hr style={{ margin: '24px 0' }} />
 
-              <h3>Palavras Registadas ({allWords.length})</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px', marginTop: '12px' }}>
-                {allWords.map((w) => (
-                  <div key={w.id} style={{ border: '1px solid #ddd', padding: '12px', borderRadius: '8px', backgroundColor: '#fafafa' }}>
-                    <h4 style={{ margin: '0 0 4px 0', color: '#111827' }}>{w.emoji} {w.word}</h4>
-                    <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>{w.grade}.º Ano</p>
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                      <button type="button" className="link-btn" onClick={() => startEditWord(w)}>Editar</button>
-                      <button type="button" className="link-btn" onClick={() => handleDeleteWord(w.id)}>Remover</button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                <h3>Palavras Registadas ({allWords.length})</h3>
+                
+                {/* Filtro por Ano */}
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#6b7280', fontWeight: 'bold' }}>Filtrar por ano:</span>
+                  {[1, 2, 3, 4, 5, 6].map((grade) => (
+                    <button
+                      key={grade}
+                      type="button"
+                      className={`btn ${Number(selectedGrade) === grade ? 'btn-primary' : 'btn-outline'}`}
+                      style={{ padding: '4px 10px', fontSize: '0.8rem', borderRadius: '15px' }}
+                      onClick={() => setSelectedGrade(grade)}
+                    >
+                      {grade}.º Ano
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px', marginTop: '16px' }}>
+                {allWords
+                  .filter(w => Number(w.grade) === Number(selectedGrade))
+                  .map((w) => (
+                    <div key={w.id} style={{ border: '1px solid #ddd', padding: '12px', borderRadius: '8px', backgroundColor: '#fafafa' }}>
+                      <h4 style={{ margin: '0 0 4px 0', color: '#111827' }}>{w.emoji} {w.word}</h4>
+                      <p style={{ margin: 0, color: '#6b7280', fontSize: '0.85rem' }}>
+                        {w.grade}.º Ano • Nível {w.plnn_level || 'A1'}
+                      </p>
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                        <button type="button" className="link-btn" onClick={() => startEditWord(w)}>Editar</button>
+                        <button type="button" className="link-btn" onClick={() => handleDeleteWord(w.id)}>Remover</button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             </React.Fragment>
           )}
-        </div>
-      </div>
-    );
   }
 
   // 4. ECRÃ: Visão do Aluno / Jogo Pedagógico PLNN

@@ -18,7 +18,13 @@ function App() {
   const [progress, setProgress] = useState({});
   const [currentWord, setCurrentWord] = useState(null);
   const [selectedTheme, setSelectedTheme] = useState(null);
-  const [currentView, setCurrentView] = useState("student_select");
+  //const [currentView, setCurrentView] = useState("student_select");
+  // Verifica se o URL contém "?prof"
+  const isProfUrl = window.location.search.includes("prof");
+
+  // Se tiver "?prof", abre na login de professor; caso contrário, abre na seleção de aluno
+  const [currentView, setCurrentView] = useState(isProfUrl ? "teacher_login" : "student_select");
+  
   const [editingStudentId, setEditingStudentId] = useState(null);
 
   // Formulários do Professor

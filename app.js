@@ -445,103 +445,138 @@ const handleSelectStudent = async (student) => {
           <hr style={{ margin: '16px 0' }} />
 
           {dashboardTab === "alunos" && (
-            <React.Fragment>
-              <h3>{editingStudentId ? "Editar Aluno" : "Criar Novo Aluno"}</h3>
-
-              <form 
-                onSubmit={handleStudentSubmit} 
-                autoComplete="off"
-                style={{ display: 'grid', gap: '12px', gridTemplateColumns: '1fr 1fr 1fr 1fr auto', alignItems: 'end', marginTop: '12px' }}
+  <React.Fragment>
+    {/* 1. SELEÇÃO DE CONTEXTO / FILTROS GLOBAIS */}
+    <div style={{ backgroundColor: '#f9fafb', padding: '16px', borderRadius: '12px', border: '1px solid #e5e7eb', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        
+        {/* Filtro por Ano Escolar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <span style={{ fontWeight: 'bold', fontSize: '0.9rem', color: '#374151', minWidth: '100px' }}>Ano Escolar:</span>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            {[1, 2, 3, 4, 5, 6].map((grade) => (
+              <button
+                key={grade}
+                type="button"
+                className={`btn ${Number(selectedGrade) === grade ? 'btn-primary' : 'btn-outline'}`}
+                style={{ padding: '6px 14px', fontSize: '0.85rem', borderRadius: '20px' }}
+                onClick={() => {
+                  setSelectedGrade(grade);
+                  setNewStudentGrade(grade);
+                }}
               >
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Nome do Aluno</label>
-                  <input
-                    type="text"
-                    className="input"
-                    placeholder="Ex: Zé Maria"
-                    value={newStudentName}
-                    onChange={(e) => setNewStudentName(e.target.value)}
-                    autoComplete="off"
-                    required
-                  />
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>PIN do Aluno</label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    className="input"
-                    placeholder="Ex: 1234"
-                    value={newStudentPin}
-                    onChange={(e) => setNewStudentPin(e.target.value)}
-                    autoComplete="new-password"
-                    required
-                  />
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Ano Escolar</label>
-                  <select className="input" value={newStudentGrade} onChange={(e) => setNewStudentGrade(e.target.value)}>
-                    <option value="1">1.º Ano</option>
-                    <option value="2">2.º Ano</option>
-                    <option value="3">3.º Ano</option>
-                    <option value="4">4.º Ano</option>
-                    <option value="5">5.º Ano</option>
-                    <option value="6">6.º Ano</option>
-                  </select>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Nível PLNN</label>
-                  <select className="input" value={newStudentPlnnLevel} onChange={(e) => setNewStudentPlnnLevel(e.target.value)}>
-                    <option value="A1">Nível A1</option>
-                    <option value="A2">Nível A2</option>
-                    <option value="B1">Nível B1</option>
-                    <option value="B2">Nível B2</option>
-                  </select>
-                </div>
-
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <button type="submit" className="btn btn-primary" style={{ height: '42px' }}>
-                    {editingStudentId ? "Guardar" : "Adicionar"}
-                  </button>
-                  {editingStudentId && (
-                    <button type="button" className="btn btn-outline" style={{ height: '42px' }} onClick={clearStudentForm}>
-                      Cancelar
-                    </button>
-                  )}
-                </div>
-              </form>
-
-              <hr style={{ margin: '24px 0' }} />
-
-              <h3>Alunos Registados ({students.length})</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px', marginTop: '12px' }}>
-                {students.map((student) => (
-                  <div key={student.id} style={{ border: '1px solid #ddd', padding: '12px', borderRadius: '8px', backgroundColor: '#fafafa' }}>
-                    <h4 style={{ margin: '0 0 4px 0', color: '#111827' }}>{student.name}</h4>
-                    <p style={{ margin: 0, color: '#6b7280', fontSize: '0.9rem' }}>
-                      {student.grade}.º Ano • Nível {student.plnn_level || 'A1'}
-                    </p>
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                      <button type="button" className="link-btn" onClick={() => startEditStudent(student)}>
-                        Editar
-                      </button>
-                      <button type="button" className="link-btn" onClick={() => handleDeleteStudent(student.id)}>
-                        Remover
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <button className="btn btn-outline" style={{ marginTop: '20px' }} onClick={() => setCurrentView("student_select")}>
-                Ver Visão do Aluno
+                {grade}.º Ano
               </button>
-            </React.Fragment>
-          )}
+            ))}
+          </div>
+        </div>
 
+        {/* Filtro por Nível PLNN */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <span style={{ fontWeight: 'bold', fontSize: '0.9rem', color: '#374151', minWidth: '100px' }}>Nível PLNN:</span>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            {["A1", "A2", "B1", "B2"].map((level) => (
+              <button
+                key={level}
+                type="button"
+                className={`btn ${selectedPlnnLevel === level ? 'btn-primary' : 'btn-outline'}`}
+                style={{ padding: '6px 14px', fontSize: '0.85rem', borderRadius: '20px' }}
+                onClick={() => {
+                  setSelectedPlnnLevel(level);
+                  setNewStudentPlnnLevel(level);
+                }}
+              >
+                Nível {level}
+              </button>
+            ))}
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    {/* 2. FORMULÁRIO DE REGISTO/EDIÇÃO DE ALUNO */}
+    <h3>{editingStudentId ? "Editar Aluno" : `Criar Novo Aluno para ${selectedGrade}.º Ano (${selectedPlnnLevel || 'A1'})`}</h3>
+
+    <form 
+      onSubmit={handleStudentSubmit} 
+      autoComplete="off"
+      style={{ display: 'grid', gap: '12px', gridTemplateColumns: '2fr 1fr auto', alignItems: 'end', marginTop: '12px' }}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Nome do Aluno</label>
+        <input
+          type="text"
+          className="input"
+          placeholder="Ex: Zé Maria"
+          value={newStudentName}
+          onChange={(e) => setNewStudentName(e.target.value)}
+          autoComplete="off"
+          required
+        />
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>PIN do Aluno</label>
+        <input
+          type="text"
+          inputMode="numeric"
+          className="input"
+          placeholder="Ex: 1234"
+          value={newStudentPin}
+          onChange={(e) => setNewStudentPin(e.target.value)}
+          autoComplete="new-password"
+          required
+        />
+      </div>
+
+      <div style={{ display: 'flex', gap: '6px' }}>
+        <button type="submit" className="btn btn-primary" style={{ height: '42px' }}>
+          {editingStudentId ? "Guardar" : "Adicionar"}
+        </button>
+        {editingStudentId && (
+          <button type="button" className="btn btn-outline" style={{ height: '42px' }} onClick={clearStudentForm}>
+            Cancelar
+          </button>
+        )}
+      </div>
+    </form>
+
+    <hr style={{ margin: '24px 0' }} />
+
+    {/* 3. LISTAGEM DE ALUNOS FILTRADOS */}
+    <h3>
+      Alunos Registados ({
+        students.filter(s => Number(s.grade) === Number(selectedGrade) && (s.plnn_level || 'A1') === selectedPlnnLevel).length
+      })
+    </h3>
+
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px', marginTop: '16px' }}>
+      {students
+        .filter(s => Number(s.grade) === Number(selectedGrade) && (s.plnn_level || 'A1') === selectedPlnnLevel)
+        .map((student) => (
+          <div key={student.id} style={{ border: '1px solid #ddd', padding: '12px', borderRadius: '8px', backgroundColor: '#fafafa' }}>
+            <h4 style={{ margin: '0 0 4px 0', color: '#111827' }}>{student.name}</h4>
+            <p style={{ margin: 0, color: '#6b7280', fontSize: '0.85rem' }}>
+              {student.grade}.º Ano • Nível {student.plnn_level || 'A1'}
+            </p>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+              <button type="button" className="link-btn" onClick={() => startEditStudent(student)}>
+                Editar
+              </button>
+              <button type="button" className="link-btn" onClick={() => handleDeleteStudent(student.id)}>
+                Remover
+              </button>
+            </div>
+          </div>
+        ))}
+    </div>
+
+    <button className="btn btn-outline" style={{ marginTop: '24px' }} onClick={() => setCurrentView("student_select")}>
+      Ver Visão do Aluno
+    </button>
+  </React.Fragment>
+)}
           {dashboardTab === "palavras" && (
            <React.Fragment>
              {/* 1. SELEÇÃO DE CONTEXTO / FILTROS GLOBAIS */}

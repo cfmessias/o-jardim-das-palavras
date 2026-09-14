@@ -28,7 +28,8 @@ function App() {
   const [progress, setProgress] = useState({});
   const [currentWord, setCurrentWord] = useState(null);
   const [selectedTheme, setSelectedTheme] = useState(null);
-
+  const [selectedPlnnLevel, setSelectedPlnnLevel] = useState("A1");
+ 
   // Define a vista inicial: se for URL de prof e já tiver sessão, vai para o dashboard; senão login ou alunos
   const [currentView, setCurrentView] = useState(() => {
     if (isProfUrl) {

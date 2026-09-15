@@ -338,41 +338,82 @@ const handleWordSubmit = async (e) => {
   };
 
   const handleVerbSubmit = async (e) => {
-    e.preventDefault();
-    const payload = {
+  e.preventDefault();
+
+  if (!verbInfinitive.trim()) return;
+
+  setSavingVerb(true);
+  try {
+    let verbId = editingVerbId;
+
+    const verbPayload = {
       infinitive: verbInfinitive.trim(),
-      tense: verbTense,
       is_regular: verbIsRegular,
-      conj_eu: conjEu.trim(),
-      conj_tu: conjTu.trim(),
-      conj_ele: conjEle.trim(),
-      conj_nos: conjNos.trim(),
-      conj_vos: conjVos.trim(),
-      conj_eles: conjEles.trim(),
       grade: Number(selectedGrade),
       plnn_level: selectedPlnnLevel || 'A1',
     };
-    if (!payload.infinitive) return;
 
-    setSavingVerb(true);
-    try {
-      if (editingVerbId) {
-        const { error } = await supabase.from('verbs').update(payload).eq('id', editingVerbId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('verbs').insert([payload]);
-        if (error) throw error;
-      }
-      clearVerbForm();
-      const { data } = await supabase.from('verbs').select('*').order('id');
-      if (data) setVerbs(data);
-    } catch (err) {
-      alert("Erro ao guardar verbo: " + err.message);
-    } finally {
-      setSavingVerb(false);
+    if (verbId) {
+      // 1. Atualizar o verbo principal
+      const { error: verbErr } = await supabase
+        .from('verbs')
+        .update(verbPayload)
+        .eq('id', verbId);
+
+      if (verbErr) throw verbErr;
+
+      // Limpar conjugações antigas deste tempo verbal para reinserir
+      await supabase
+        .from('verb_conjugations')
+        .delete()
+        .eq('verb_id', verbId)
+        .eq('tense', verbTense);
+    } else {
+      // 2. Criar novo verbo principal
+      const { data: newVerb, error: verbErr } = await supabase
+        .from('verbs')
+        .insert([verbPayload])
+        .select('id')
+        .single();
+
+      if (verbErr) throw verbErr;
+      verbId = newVerb.id;
     }
-  };
 
+    // 3. Inserir as 6 conjugações na tabela 'verb_conjugations'
+    const conjugations = [
+      { person: 'eu', conjugated_form: conjEu.trim() },
+      { person: 'tu', conjugated_form: conjTu.trim() },
+      { person: 'ele', conjugated_form: conjEle.trim() },
+      { person: 'nos', conjugated_form: conjNos.trim() },
+      { person: 'vos', conjugated_form: conjVos.trim() },
+      { person: 'eles', conjugated_form: conjEles.trim() },
+    ].filter(c => c.conjugated_form !== '');
+
+    if (conjugations.length > 0) {
+      const conjugationsToInsert = conjugations.map(c => ({
+        verb_id: verbId,
+        tense: verbTense,
+        person: c.person,
+        conjugated_form: c.conjugated_form,
+      }));
+
+      const { error: conjErr } = await supabase
+        .from('verb_conjugations')
+        .insert(conjugationsToInsert);
+
+      if (conjErr) throw conjErr;
+    }
+
+    clearVerbForm();
+    await openVerbsTab(); // Recarrega os verbos atualizados
+
+  } catch (err) {
+    alert("Erro ao guardar verbo: " + err.message);
+  } finally {
+    setSavingVerb(false);
+  }
+};
   const handleDeleteVerb = async (id) => {
     if (!confirm("Remover este verbo?")) return;
     const { error } = await supabase.from('verbs').delete().eq('id', id);

@@ -243,6 +243,210 @@ const handleWordSubmit = async (e) => {
     setAllWords(await getAllWords());
   };
 
+  // ---------- Frases ----------
+  const openPhrasesTab = async () => {
+    setDashboardTab("frases");
+    const { data } = await supabase.from('phrases').select('*').order('id');
+    if (data) setPhrases(data);
+  };
+
+  const clearPhraseForm = () => {
+    setEditingPhraseId(null);
+    setPhraseText('');
+    setPhraseTargetWord('');
+    setPhraseType('leitura');
+  };
+
+  const startEditPhrase = (p) => {
+    setEditingPhraseId(p.id);
+    setPhraseText(p.phrase_text || '');
+    setPhraseTargetWord(p.target_word || '');
+    setPhraseType(p.type || 'leitura');
+  };
+
+  const handlePhraseSubmit = async (e) => {
+    e.preventDefault();
+    const payload = {
+      phrase_text: phraseText.trim(),
+      target_word: phraseTargetWord.trim(),
+      type: phraseType,
+      grade: Number(selectedGrade),
+      plnn_level: selectedPlnnLevel || 'A1',
+    };
+    if (!payload.phrase_text) return;
+
+    setSavingPhrase(true);
+    try {
+      if (editingPhraseId) {
+        const { error } = await supabase.from('phrases').update(payload).eq('id', editingPhraseId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('phrases').insert([payload]);
+        if (error) throw error;
+      }
+      clearPhraseForm();
+      const { data } = await supabase.from('phrases').select('*').order('id');
+      if (data) setPhrases(data);
+    } catch (err) {
+      alert("Erro ao guardar frase: " + err.message);
+    } finally {
+      setSavingPhrase(false);
+    }
+  };
+
+  const handleDeletePhrase = async (id) => {
+    if (!confirm("Remover esta frase?")) return;
+    const { error } = await supabase.from('phrases').delete().eq('id', id);
+    if (error) {
+      alert("Erro ao remover frase: " + error.message);
+      return;
+    }
+    setPhrases(prev => prev.filter(p => p.id !== id));
+  };
+
+  // ---------- Verbos ----------
+  const openVerbsTab = async () => {
+    setDashboardTab("verbos");
+    const { data } = await supabase.from('verbs').select('*').order('id');
+    if (data) setVerbs(data);
+  };
+
+  const clearVerbForm = () => {
+    setEditingVerbId(null);
+    setVerbInfinitive('');
+    setVerbTense('Presente do Indicativo');
+    setVerbIsRegular(true);
+    setConjEu('');
+    setConjTu('');
+    setConjEle('');
+    setConjNos('');
+    setConjVos('');
+    setConjEles('');
+  };
+
+  const startEditVerb = (v) => {
+    setEditingVerbId(v.id);
+    setVerbInfinitive(v.infinitive || '');
+    setVerbTense(v.tense || 'Presente do Indicativo');
+    setVerbIsRegular(v.is_regular !== false);
+    setConjEu(v.conj_eu || '');
+    setConjTu(v.conj_tu || '');
+    setConjEle(v.conj_ele || '');
+    setConjNos(v.conj_nos || '');
+    setConjVos(v.conj_vos || '');
+    setConjEles(v.conj_eles || '');
+  };
+
+  const handleVerbSubmit = async (e) => {
+    e.preventDefault();
+    const payload = {
+      infinitive: verbInfinitive.trim(),
+      tense: verbTense,
+      is_regular: verbIsRegular,
+      conj_eu: conjEu.trim(),
+      conj_tu: conjTu.trim(),
+      conj_ele: conjEle.trim(),
+      conj_nos: conjNos.trim(),
+      conj_vos: conjVos.trim(),
+      conj_eles: conjEles.trim(),
+      grade: Number(selectedGrade),
+      plnn_level: selectedPlnnLevel || 'A1',
+    };
+    if (!payload.infinitive) return;
+
+    setSavingVerb(true);
+    try {
+      if (editingVerbId) {
+        const { error } = await supabase.from('verbs').update(payload).eq('id', editingVerbId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('verbs').insert([payload]);
+        if (error) throw error;
+      }
+      clearVerbForm();
+      const { data } = await supabase.from('verbs').select('*').order('id');
+      if (data) setVerbs(data);
+    } catch (err) {
+      alert("Erro ao guardar verbo: " + err.message);
+    } finally {
+      setSavingVerb(false);
+    }
+  };
+
+  const handleDeleteVerb = async (id) => {
+    if (!confirm("Remover este verbo?")) return;
+    const { error } = await supabase.from('verbs').delete().eq('id', id);
+    if (error) {
+      alert("Erro ao remover verbo: " + error.message);
+      return;
+    }
+    setVerbs(prev => prev.filter(v => v.id !== id));
+  };
+
+  // ---------- Gramática ----------
+  const openGrammarTab = async () => {
+    setDashboardTab("gramatica");
+    const { data } = await supabase.from('grammar').select('*').order('id');
+    if (data) setGrammarList(data);
+  };
+
+  const clearGrammarForm = () => {
+    setEditingGrammarId(null);
+    setGrammarCategory('Género');
+    setGrammarBaseWord('');
+    setGrammarTargetWord('');
+    setGrammarFeatureType('');
+  };
+
+  const startEditGrammar = (g) => {
+    setEditingGrammarId(g.id);
+    setGrammarCategory(g.category || 'Género');
+    setGrammarBaseWord(g.base_word || '');
+    setGrammarTargetWord(g.target_word || '');
+    setGrammarFeatureType(g.feature_type || '');
+  };
+
+  const handleGrammarSubmit = async (e) => {
+    e.preventDefault();
+    const payload = {
+      category: grammarCategory,
+      base_word: grammarBaseWord.trim(),
+      target_word: grammarTargetWord.trim(),
+      feature_type: grammarFeatureType.trim(),
+      grade: Number(selectedGrade),
+      plnn_level: selectedPlnnLevel || 'A1',
+    };
+    if (!payload.base_word || !payload.target_word) return;
+
+    setSavingGrammar(true);
+    try {
+      if (editingGrammarId) {
+        const { error } = await supabase.from('grammar').update(payload).eq('id', editingGrammarId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('grammar').insert([payload]);
+        if (error) throw error;
+      }
+      clearGrammarForm();
+      const { data } = await supabase.from('grammar').select('*').order('id');
+      if (data) setGrammarList(data);
+    } catch (err) {
+      alert("Erro ao guardar regra gramatical: " + err.message);
+    } finally {
+      setSavingGrammar(false);
+    }
+  };
+
+  const handleDeleteGrammar = async (id) => {
+    if (!confirm("Remover esta regra gramatical?")) return;
+    const { error } = await supabase.from('grammar').delete().eq('id', id);
+    if (error) {
+      alert("Erro ao remover regra: " + error.message);
+      return;
+    }
+    setGrammarList(prev => prev.filter(g => g.id !== id));
+  };
+
   // Ações do Aluno e Carregamento de Exercícios por Nível PLNN
   // REMOVER as funções: fetchPlnnExercises e handleLevelChange
 
@@ -476,21 +680,21 @@ const handleSelectStudent = async (student) => {
             <button
               type="button"
               className={`btn ${dashboardTab === "frases" ? "btn-primary" : "btn-outline"}`}
-              onClick={() => setDashboardTab("frases")}
+              onClick={openPhrasesTab}
             >
               📖 Frases
             </button>
             <button
               type="button"
               className={`btn ${dashboardTab === "verbos" ? "btn-primary" : "btn-outline"}`}
-              onClick={() => setDashboardTab("verbos")}
+              onClick={openVerbsTab}
             >
               🗣️ Verbos
             </button>
             <button
               type="button"
               className={`btn ${dashboardTab === "gramatica" ? "btn-primary" : "btn-outline"}`}
-              onClick={() => setDashboardTab("gramatica")}
+              onClick={openGrammarTab}
             >
               📐 Gramática
             </button>

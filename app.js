@@ -385,60 +385,79 @@ const handleWordSubmit = async (e) => {
  
   // Função para processar e carregar o ficheiro CSV de Verbos
    const handleVerbsFileUpload = async (event) => {
-     const file = event.target.files[0];
-     if (!file) return;
-   
-     const reader = new FileReader();
-     reader.onload = async (e) => {
-       try {
-         const text = e.target.result;
-         const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-         
-         if (lines.length < 2) {
-           alert("O ficheiro está vazio ou não contém dados suficientes.");
-           return;
-         }
-   
-         // Omitir o cabeçalho
-         const rows = lines.slice(1);
-         const verbsToInsert = rows.map(row => {
-           // Separa por vírgulas (ou ponto e vírgula, dependendo do export do Excel)
-           const cols = row.split(/[,;]/).map(c => c.trim().replace(/^["']|["']$/g, ''));
-           
-           return {
-             infinitive: cols[0],
-             tense: cols[1] || 'Presente do Indicativo',
-             is_regular: cols[2] === 'true' || cols[2] === '1',
-             conj_eu: cols[3] || '',
-             conj_tu: cols[4] || '',
-             conj_ele: cols[5] || '',
-             conj_nos: cols[6] || '',
-             conj_vos: cols[7] || '',
-             conj_eles: cols[8] || '',
-             grade: Number(cols[9]) || Number(selectedGrade),
-             plnn_level: cols[10] || selectedPlnnLevel || 'A1'
-           };
-         });
-   
-         // Envia em lote (batch insert) para o Supabase
-         const { error } = await supabase.from('verbs').insert(verbsToInsert);
-         if (error) throw error;
-   
-         alert(`${verbsToInsert.length} verbos importados com sucesso! 🎉`);
-         
-         // Recarrega a lista de verbos no estado
-         const { data } = await supabase.from('verbs').select('*').order('id');
-         if (data) setVerbs(data);
-   
-       } catch (err) {
-         alert("Erro ao importar verbos: " + err.message);
-       } finally {
-         event.target.value = ''; // Limpa o input file
-       }
-     };
-   
-     reader.readAsText(file);
-   };
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const text = e.target.result;
+      const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      
+      if (lines.length < 2) {
+        alert("O ficheiro está vazio ou inválido.");
+        return;
+      }
+
+      const rows = lines.slice(1);
+      const personsMap = ['eu', 'tu', 'ele', 'nos', 'vos', 'eles'];
+
+      for (const row of rows) {
+        const cols = row.split(/[,;]/).map(c => c.trim().replace(/^["']|["']$/g, ''));
+        const infinitive = cols[0];
+        const tense = cols[1] || 'Presente do Indicativo';
+
+        if (!infinitive) continue;
+
+        // 1. Garante ou cria o registo do verbo na tabela principal 'verbs'
+        let { data: verbRecord, error: verbErr } = await supabase
+          .from('verbs')
+          .select('id')
+          .eq('infinitive', infinitive)
+          .maybeSingle();
+
+        if (verbErr) throw verbErr;
+
+        if (!verbRecord) {
+          const { data: newVerb, error: createErr } = await supabase
+            .from('verbs')
+            .insert([{ infinitive, grade: Number(selectedGrade), plnn_level: selectedPlnnLevel || 'A1' }])
+            .select('id')
+            .single();
+
+          if (createErr) throw createErr;
+          verbRecord = newVerb;
+        }
+
+        // 2. Mapeia as 6 conjugações para a tabela 'verb_conjugations'
+        const conjugationsToInsert = personsMap.map((person, idx) => ({
+          verb_id: verbRecord.id,
+          tense: tense,
+          person: person,
+          conjugated_form: cols[idx + 2] || ''
+        })).filter(c => c.conjugated_form !== '');
+
+        if (conjugationsToInsert.length > 0) {
+          const { error: conjErr } = await supabase
+            .from('verb_conjugations')
+            .insert(conjugationsToInsert);
+
+          if (conjErr) throw conjErr;
+        }
+      }
+
+      alert("Importação de verbos e conjugações concluída com sucesso! 🎉");
+      openVerbsTab(); // Recarrega os dados na interface
+
+    } catch (err) {
+      alert("Erro ao importar verbos: " + err.message);
+    } finally {
+      event.target.value = '';
+    }
+  };
+
+  reader.readAsText(file);
+};
  
   // ---------- Gramática ----------
   const openGrammarTab = async () => {

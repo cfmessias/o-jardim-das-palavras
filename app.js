@@ -711,26 +711,267 @@ const handleSelectStudent = async (student) => {
           {/* 3. SEPARADOR: FRASES */}
           {dashboardTab === "frases" && (
             <React.Fragment>
-              <h3>Adicionar Frase para {selectedGrade}.º Ano ({selectedPlnnLevel || 'A1'})</h3>
-              {/* O formulário de frases entra aqui */}
+              <h3>{editingPhraseId ? "Editar Frase" : `Adicionar Frase para ${selectedGrade}.º Ano (${selectedPlnnLevel || 'A1'})`}</h3>
+          
+              <form onSubmit={handlePhraseSubmit} autoComplete="off" style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Texto da Frase</label>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="Ex: O cão correu rapidamente no parque."
+                    value={phraseText}
+                    onChange={(e) => setPhraseText(e.target.value)}
+                    required
+                  />
+                </div>
+          
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Palavra-Alvo / Lacuna (opcional)</label>
+                    <input
+                      type="text"
+                      className="input"
+                      placeholder="Ex: correu"
+                      value={phraseTargetWord}
+                      onChange={(e) => setPhraseTargetWord(e.target.value)}
+                    />
+                  </div>
+          
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Tipo de Exercício</label>
+                    <select 
+                      className="input" 
+                      value={phraseType} 
+                      onChange={(e) => setPhraseType(e.target.value)}
+                    >
+                      <option value="leitura">Leitura / Compreensão</option>
+                      <option value="lacuna">Preenchimento de Lacuna</option>
+                      <option value="ordenacao">Ordenação de Frase</option>
+                    </select>
+                  </div>
+                </div>
+          
+                <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+                  <button type="submit" className="btn btn-primary" disabled={savingPhrase}>
+                    {editingPhraseId ? "Guardar alterações" : "Adicionar frase"}
+                  </button>
+                  {editingPhraseId && (
+                    <button type="button" className="btn btn-outline" onClick={clearPhraseForm}>
+                      Cancelar edição
+                    </button>
+                  )}
+                </div>
+              </form>
+          
+              <hr style={{ margin: '24px 0' }} />
+          
+              <h3>
+                Frases Registadas ({
+                  phrases.filter(p => Number(p.grade) === Number(selectedGrade) && (p.plnn_level || 'A1') === selectedPlnnLevel).length
+                })
+              </h3>
+          
+              <div style={{ display: 'grid', gap: '10px', marginTop: '16px' }}>
+                {phrases
+                  .filter(p => Number(p.grade) === Number(selectedGrade) && (p.plnn_level || 'A1') === selectedPlnnLevel)
+                  .map((p) => (
+                    <div key={p.id} style={{ padding: '12px', border: '1px solid #e5e7eb', borderRadius: '8px', backgroundColor: '#fafafa', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <p style={{ margin: 0, fontWeight: 'bold', color: '#111827' }}>{p.phrase_text}</p>
+                        <div style={{ display: 'flex', gap: '12px', marginTop: '4px', fontSize: '0.8rem', color: '#6b7280' }}>
+                          <span>Tipo: <strong>{p.type || 'leitura'}</strong></span>
+                          {p.target_word && <span style={{ color: '#059669' }}>Palavra-alvo: <strong>{p.target_word}</strong></span>}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button type="button" className="link-btn" onClick={() => startEditPhrase(p)}>Editar</button>
+                        <button type="button" className="link-btn" onClick={() => handleDeletePhrase(p.id)}>Remover</button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
             </React.Fragment>
           )}
   
           {/* 4. SEPARADOR: VERBOS */}
-          {dashboardTab === "verbos" && (
-            <React.Fragment>
-              <h3>Gerir Verbos para {selectedGrade}.º Ano ({selectedPlnnLevel || 'A1'})</h3>
-              {/* O formulário e opção de upload TXT entram aqui */}
-            </React.Fragment>
-          )}
+         {dashboardTab === "verbos" && (
+          <React.Fragment>
+            <h3>{editingVerbId ? "Editar Verbo" : `Adicionar Verbo para ${selectedGrade}.º Ano (${selectedPlnnLevel || 'A1'})`}</h3>
+        
+            <form onSubmit={handleVerbSubmit} autoComplete="off" style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Verbo (Infinitivo)</label>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="Ex: cantar"
+                    value={verbInfinitive}
+                    onChange={(e) => setVerbInfinitive(e.target.value)}
+                    required
+                  />
+                </div>
+        
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Tempo Verbal</label>
+                  <select className="input" value={verbTense} onChange={(e) => setVerbTense(e.target.value)}>
+                    <option value="Presente do Indicativo">Presente do Indicativo</option>
+                    <option value="Pretérito Perfeito">Pretérito Perfeito</option>
+                    <option value="Pretérito Imperfeito">Pretérito Imperfeito</option>
+                    <option value="Futuro do Indicativo">Futuro do Indicativo</option>
+                  </select>
+                </div>
+        
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Regularidade</label>
+                  <select className="input" value={verbIsRegular ? "true" : "false"} onChange={(e) => setVerbIsRegular(e.target.value === "true")}>
+                    <option value="true">Regular</option>
+                    <option value="false">Irregular</option>
+                  </select>
+                </div>
+              </div>
+        
+              {/* Formulário rápido para as 6 pessoas gramaticais */}
+              <span style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#374151', marginTop: '8px' }}>Conjugações:</span>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                <input type="text" className="input" placeholder="Eu (ex: canto)" value={conjEu} onChange={(e) => setConjEu(e.target.value)} />
+                <input type="text" className="input" placeholder="Tu (ex: cantas)" value={conjTu} onChange={(e) => setConjTu(e.target.value)} />
+                <input type="text" className="input" placeholder="Ele/Ela (ex: canta)" value={conjEle} onChange={(e) => setConjEle(e.target.value)} />
+                <input type="text" className="input" placeholder="Nós (ex: cantamos)" value={conjNos} onChange={(e) => setConjNos(e.target.value)} />
+                <input type="text" className="input" placeholder="Vós (ex: cantais)" value={conjVos} onChange={(e) => setConjVos(e.target.value)} />
+                <input type="text" className="input" placeholder="Eles/Elas (ex: cantam)" value={conjEles} onChange={(e) => setConjEles(e.target.value)} />
+              </div>
+        
+              <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+                <button type="submit" className="btn btn-primary" disabled={savingVerb}>
+                  {editingVerbId ? "Guardar alterações" : "Adicionar verbo"}
+                </button>
+                {editingVerbId && (
+                  <button type="button" className="btn btn-outline" onClick={clearVerbForm}>
+                    Cancelar edição
+                  </button>
+                )}
+              </div>
+            </form>
+        
+            <hr style={{ margin: '24px 0' }} />
+        
+            <h3>
+              Verbos Registados ({
+                verbs.filter(v => Number(v.grade) === Number(selectedGrade) && (v.plnn_level || 'A1') === selectedPlnnLevel).length
+              })
+            </h3>
+        
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px', marginTop: '16px' }}>
+              {verbs
+                .filter(v => Number(v.grade) === Number(selectedGrade) && (v.plnn_level || 'A1') === selectedPlnnLevel)
+                .map((v) => (
+                  <div key={v.id} style={{ border: '1px solid #ddd', padding: '12px', borderRadius: '8px', backgroundColor: '#fafafa' }}>
+                    <h4 style={{ margin: '0 0 4px 0', color: '#111827' }}>{v.infinitive}</h4>
+                    <p style={{ margin: 0, color: '#6b7280', fontSize: '0.85rem' }}>
+                      {v.tense || 'Presente'} • {v.is_regular ? 'Regular' : 'Irregular'}
+                    </p>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                      <button type="button" className="link-btn" onClick={() => startEditVerb(v)}>Editar</button>
+                      <button type="button" className="link-btn" onClick={() => handleDeleteVerb(v.id)}>Remover</button>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </React.Fragment>
+        )}
   
           {/* 5. SEPARADOR: GRAMÁTICA */}
           {dashboardTab === "gramatica" && (
-            <React.Fragment>
-              <h3>Regras Gramaticais para {selectedGrade}.º Ano ({selectedPlnnLevel || 'A1'})</h3>
-              {/* O formulário de gramática entra aqui */}
-            </React.Fragment>
-          )}
+           <React.Fragment>
+             <h3>{editingGrammarId ? "Editar Parâmetro Gramatical" : `Adicionar Regra Gramatical para ${selectedGrade}.º Ano (${selectedPlnnLevel || 'A1'})`}</h3>
+         
+             <form onSubmit={handleGrammarSubmit} autoComplete="off" style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
+               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px' }}>
+                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                   <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Categoria</label>
+                   <select className="input" value={grammarCategory} onChange={(e) => setGrammarCategory(e.target.value)}>
+                     <option value="Género">Género (M/F)</option>
+                     <option value="Número">Número (Singular/Plural)</option>
+                     <option value="Classe">Classe de Palavras</option>
+                     <option value="Pontuação">Pontuação</option>
+                   </select>
+                 </div>
+         
+                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                   <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Palavra Base</label>
+                   <input
+                     type="text"
+                     className="input"
+                     placeholder="Ex: menino"
+                     value={grammarBaseWord}
+                     onChange={(e) => setGrammarBaseWord(e.target.value)}
+                     required
+                   />
+                 </div>
+         
+                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                   <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Par / Alvo</label>
+                   <input
+                     type="text"
+                     className="input"
+                     placeholder="Ex: menina"
+                     value={grammarTargetWord}
+                     onChange={(e) => setGrammarTargetWord(e.target.value)}
+                     required
+                   />
+                 </div>
+         
+                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                   <label style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#4b5563' }}>Regra / Tipo</label>
+                   <input
+                     type="text"
+                     className="input"
+                     placeholder="Ex: Feminino em -a"
+                     value={grammarFeatureType}
+                     onChange={(e) => setGrammarFeatureType(e.target.value)}
+                   />
+                 </div>
+               </div>
+         
+               <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+                 <button type="submit" className="btn btn-primary" disabled={savingGrammar}>
+                   {editingGrammarId ? "Guardar alterações" : "Adicionar regra"}
+                 </button>
+                 {editingGrammarId && (
+                   <button type="button" className="btn btn-outline" onClick={clearGrammarForm}>
+                     Cancelar edição
+                   </button>
+                 )}
+               </div>
+             </form>
+         
+             <hr style={{ margin: '24px 0' }} />
+         
+             <h3>
+               Regras Registadas ({
+                 grammarList.filter(g => Number(g.grade) === Number(selectedGrade) && (g.plnn_level || 'A1') === selectedPlnnLevel).length
+               })
+             </h3>
+         
+             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px', marginTop: '16px' }}>
+               {grammarList
+                 .filter(g => Number(g.grade) === Number(selectedGrade) && (g.plnn_level || 'A1') === selectedPlnnLevel)
+                 .map((g) => (
+                   <div key={g.id} style={{ border: '1px solid #ddd', padding: '12px', borderRadius: '8px', backgroundColor: '#fafafa' }}>
+                     <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: '#2563eb', textTransform: 'uppercase' }}>{g.category}</span>
+                     <h4 style={{ margin: '4px 0', color: '#111827' }}>{g.base_word} → {g.target_word}</h4>
+                     {g.feature_type && <p style={{ margin: 0, color: '#6b7280', fontSize: '0.85rem' }}>{g.feature_type}</p>}
+                     <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                       <button type="button" className="link-btn" onClick={() => startEditGrammar(g)}>Editar</button>
+                       <button type="button" className="link-btn" onClick={() => handleDeleteGrammar(g.id)}>Remover</button>
+                     </div>
+                   </div>
+                 ))}
+             </div>
+           </React.Fragment>
+         )}
   
         </div>
       </div>

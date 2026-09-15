@@ -39,6 +39,36 @@ function App() {
     return "student_select";
   });
 
+  // Estados para Frases
+const [phrases, setPhrases] = React.useState([]);
+const [editingPhraseId, setEditingPhraseId] = React.useState(null);
+const [phraseText, setPhraseText] = React.useState('');
+const [phraseTargetWord, setPhraseTargetWord] = React.useState('');
+const [phraseType, setPhraseType] = React.useState('leitura');
+const [savingPhrase, setSavingPhrase] = React.useState(false);
+
+// Estados para Verbos
+const [verbs, setVerbs] = React.useState([]);
+const [editingVerbId, setEditingVerbId] = React.useState(null);
+const [verbInfinitive, setVerbInfinitive] = React.useState('');
+const [verbTense, setVerbTense] = React.useState('Presente do Indicativo');
+const [verbIsRegular, setVerbIsRegular] = React.useState(true);
+const [conjEu, setConjEu] = React.useState('');
+const [conjTu, setConjTu] = React.useState('');
+const [conjEle, setConjEle] = React.useState('');
+const [conjNos, setConjNos] = React.useState('');
+const [conjVos, setConjVos] = React.useState('');
+const [conjEles, setConjEles] = React.useState('');
+const [savingVerb, setSavingVerb] = React.useState(false);
+
+// Estados para Gramática
+const [grammarList, setGrammarList] = React.useState([]);
+const [editingGrammarId, setEditingGrammarId] = React.useState(null);
+const [grammarCategory, setGrammarCategory] = React.useState('Género');
+const [grammarBaseWord, setGrammarBaseWord] = React.useState('');
+const [grammarTargetWord, setGrammarTargetWord] = React.useState('');
+const [grammarFeatureType, setGrammarFeatureType] = React.useState('');
+const [savingGrammar, setSavingGrammar] = React.useState(false);
   const [editingStudentId, setEditingStudentId] = useState(null);
   // Formulários do Professor
   const [loginEmail, setLoginEmail] = useState("");

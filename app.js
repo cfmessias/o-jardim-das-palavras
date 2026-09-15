@@ -382,7 +382,64 @@ const handleWordSubmit = async (e) => {
     }
     setVerbs(prev => prev.filter(v => v.id !== id));
   };
-
+ 
+  // Função para processar e carregar o ficheiro CSV de Verbos
+   const handleVerbsFileUpload = async (event) => {
+     const file = event.target.files[0];
+     if (!file) return;
+   
+     const reader = new FileReader();
+     reader.onload = async (e) => {
+       try {
+         const text = e.target.result;
+         const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+         
+         if (lines.length < 2) {
+           alert("O ficheiro está vazio ou não contém dados suficientes.");
+           return;
+         }
+   
+         // Omitir o cabeçalho
+         const rows = lines.slice(1);
+         const verbsToInsert = rows.map(row => {
+           // Separa por vírgulas (ou ponto e vírgula, dependendo do export do Excel)
+           const cols = row.split(/[,;]/).map(c => c.trim().replace(/^["']|["']$/g, ''));
+           
+           return {
+             infinitive: cols[0],
+             tense: cols[1] || 'Presente do Indicativo',
+             is_regular: cols[2] === 'true' || cols[2] === '1',
+             conj_eu: cols[3] || '',
+             conj_tu: cols[4] || '',
+             conj_ele: cols[5] || '',
+             conj_nos: cols[6] || '',
+             conj_vos: cols[7] || '',
+             conj_eles: cols[8] || '',
+             grade: Number(cols[9]) || Number(selectedGrade),
+             plnn_level: cols[10] || selectedPlnnLevel || 'A1'
+           };
+         });
+   
+         // Envia em lote (batch insert) para o Supabase
+         const { error } = await supabase.from('verbs').insert(verbsToInsert);
+         if (error) throw error;
+   
+         alert(`${verbsToInsert.length} verbos importados com sucesso! 🎉`);
+         
+         // Recarrega a lista de verbos no estado
+         const { data } = await supabase.from('verbs').select('*').order('id');
+         if (data) setVerbs(data);
+   
+       } catch (err) {
+         alert("Erro ao importar verbos: " + err.message);
+       } finally {
+         event.target.value = ''; // Limpa o input file
+       }
+     };
+   
+     reader.readAsText(file);
+   };
+ 
   // ---------- Gramática ----------
   const openGrammarTab = async () => {
     setDashboardTab("gramatica");
@@ -1032,8 +1089,21 @@ const handleSelectStudent = async (student) => {
           {/* 4. SEPARADOR: VERBOS */}
          {dashboardTab === "verbos" && (
           <React.Fragment>
-            <h3>{editingVerbId ? "Editar Verbo" : `Adicionar Verbo para ${selectedGrade}.º Ano (${selectedPlnnLevel || 'A1'})`}</h3>
-        
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3>{editingVerbId ? "Editar Verbo" : `Adicionar Verbo para ${selectedGrade}.º Ano (${selectedPlnnLevel || 'A1'})`}</h3>
+              
+              {/* Botão de Upload em Lote */}
+              <label className="btn btn-outline" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                📁 Importar CSV de Verbos
+                <input 
+                  type="file" 
+                  accept=".csv, .txt" 
+                  onChange={handleVerbsFileUpload} 
+                  style={{ display: 'none' }} 
+                />
+              </label>
+            </div>
+                    
             <form onSubmit={handleVerbSubmit} autoComplete="off" style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
